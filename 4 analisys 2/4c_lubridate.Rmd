@@ -1,0 +1,289 @@
+---
+title: "Data Analisys part 2"
+subtitle: "lession 4c lubridate"
+author: "Eviatar Guttman"
+date: "Last updated: `r format(Sys.time(), '%d-%m-%Y')`"  
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: no
+    toc_collapsed: no
+    smooth_scroll: yes
+    fig_caption: yes
+    highlight: tango
+    theme: flatly
+    css: ../style.css
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+---  
+```{r setup, include = F}
+# global chunk options
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      tidy=TRUE,
+                      # fig.path='Figures_RMD/',
+                      fig.align = 'center',
+                      collapse = TRUE)
+
+# don't show NA's in tables
+options(knitr.kable.NA = '')
+
+```
+
+```{r}
+library(tidyverse)
+library(nycflights13)
+library(lubridate)
+```
+
+There are three types of date/time data that refer to an instant in time:  
+    
+1. A date.  Tibbles print this as `<date>`.  
+2. A time within a day.  Tibbles print this as `<time>`.  
+3. A date-time is a date plus a time: it uniquely identifies an instant in time (typically to the nearest second). Tibbles print this as `<dttm>`. Elsewhere in R these are called POSIXct.  
+
+```{r}
+today()
+
+attributes(today())
+
+typeof(today())
+
+
+now()
+
+attributes(now())
+
+typeof(now())
+
+
+```
+
+There are three ways you’re likely to create a date/time:  
+    
+1. From a string.  
+2. From individual date-time components.  
+3. From an existing date/time object.  
+
+# from strings 
+Here are a banch of functions that Transforms dates stored in character and numeric vectors to Date or POSIXct objects: 
+```{r}
+ymd("2017-01-31")
+
+ymd("2017/01/31")
+
+mdy("January 31st, 2017")
+
+dmy("31-Jan-2017")
+
+x <- c(20090101, "2009-01-02", "2009 01 03", "2009-1-4",
+       "2009-1, 5", "Created on 2009 1 6", "200901 !!! 07")
+ymd(x)
+
+ymd_hms("2017-01-31 20:11:59")
+
+mdy_hm("01/31/2017 08:01")
+```
+
+
+# From individual components  
+`make_date()` produces objects of class `Date`
+```{r}
+make_date(year = 1970L, month = 1L, day = 1L)
+```
+
+like most functions in R, `make_date` is vectorized: 
+```{r}
+flights %>% 
+  select(year, month, day) %>% 
+  mutate(departure = make_date(year, month, day))
+
+flights %>% 
+  select(year, month, day, hour, minute) %>% 
+  mutate(departure = make_datetime(year, month, day, hour, minute))
+
+```
+
+# From other types  
+You may want to switch between a date-time and a date. That’s the job of `as_datetime()` and `as_date()`:
+
+```{r}
+as_datetime(today())
+
+as_date(now())
+```
+
+ Sometimes you’ll get date/times as numeric offsets from the “Unix Epoch”, 1970-01-01.  
+ If the offset is in seconds, use `as_datetime()`; if it’s in days, use `as_date()`.
+```{r}
+60 * 60 * 10 # 10 hours
+
+as_datetime(60 * 60 * 10)
+
+365 * 10 + 2 # 10 years
+
+as_date(365 * 10 + 2)
+```
+
+# Useful functions
+
+```{r}
+some_time <- ymd_hms("2016-07-08 12:34:56")
+
+year(some_time)
+
+month(some_time)
+
+month(some_time, label = T)
+
+month(some_time, label = T, abbr = F)
+```
+
+This happens because we set: `Sys.setlocale("LC_ALL", "hebrew")` (I think).
+there is a function called `local()` that reads the days and time from you system locality. 
+
+```{r}
+locale()
+
+locale('he')
+```
+
+count number of X since the beginning
+
+```{r}
+mday(some_time) # מספר ימים מתחילת החודש
+
+yday(some_time) # מספר ימים מתחילת שנה
+
+wday(some_time) # יום שישי
+
+wday(some_time, label = T)
+```
+
+its an ordered factor. we haven't talked about it yet. 
+```{r}
+attributes(wday(some_time, label = T))
+```
+
+We can use wday() to see that more flights depart during the week than on the weekend  
+```{r}
+names(flights)
+
+flights %>% select(year, month, day, dep_time  ) %>%
+  mutate(departure = make_datetime(year, month, day, dep_time %/% 100, dep_time %% 100)) %>%
+  mutate(wday = wday(departure, label = T)) %>%
+  ggplot(aes(x = wday))+ geom_bar()
+
+```
+we need to check about NA's in the data!
+
+Very useful is : `floor_date`, `round_date`, `ceiling_date`
+
+```{r}
+(x <- ymd_hms("2009-08-03 12:01:59.23"))
+
+round_date(x, "second")
+
+round_date(x, "minute")
+
+round_date(x, "5 mins")
+
+round_date(x, "2 hours")
+
+round_date(x, "bimonth")
+
+round_date(x, "quarter") == round_date(x, "3 months")
+
+round_date(x, "halfyear")
+
+round_date(x, "year")
+
+
+```
+
+# difftime
+there is also a timediff format:   
+
+
+```{r}
+arrive <- ymd_hms("2011-06-04 12:00:00", tz = "Pacific/Auckland")
+
+leave <- ymd_hms("2011-08-10 14:00:00", tz = "Pacific/Auckland")
+
+(time_diff <- interval(arrive, leave))
+
+attributes(time_diff)
+```
+number of days differnce: 
+
+```{r}
+time_diff / ddays(1)
+
+time_diff / ddays(3)
+
+time_diff / dweeks()
+```
+
+number of month diff: 
+
+```{r}
+time_diff / dmonths()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div dir="rtl">
+
+</div>
+
+
+# exercises  
+<div dir="rtl">
+1. מה קורה אם מנסים לעשות parse ל-string שמכיל תאריכים לא תקפים?   
+</div>
+`ymd(c("2010-10-10", "bananas"))`  
+<div dir="rtl">
+2. מה התפקיד של הארגומנט `tzone` בפונקציה `today`? מדוע הוא חשוב?   
+3. השתמש בפונקציות המתאימות ב-`lubridate` כדי לעשות parse לתאריכים הבאים: 
+</div>
+```{r}
+d1 <- "January 1, 2010"
+d2 <- "2015-Mar-07"
+d3 <- "06-Jun-2017"
+d4 <- c("August 19 (2015)", "July 1 (2015)")
+d5 <- "12/30/14" # Dec 30, 2014
+```
+
+<div dir="rtl">
+4. איך ההתפלגות של שעות הטיסה משתנות לאורך השנה?   
+5. באיזה יום בשבוע כדאי לטוס אם רוצים למזער את ההסתברות לאיחור?   
+</div>
+
+

@@ -1,0 +1,452 @@
+---
+title: "Data Analisys part 2"
+subtitle: "lession 4b strings"
+author: "Eviatar Guttman"
+date: "Last updated: `r format(Sys.time(), '%d-%m-%Y')`"  
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: no
+    toc_collapsed: no
+    smooth_scroll: yes
+    fig_caption: yes
+    highlight: tango
+    theme: flatly
+    css: ../style.css
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+---  
+```{r setup, include = F}
+# global chunk options
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = TRUE,
+                      message = TRUE,
+                      tidy=TRUE,
+                      fig.align = 'center',
+                      collapse = TRUE)
+
+# don't show NA's in tables
+options(knitr.kable.NA = '')
+
+```
+
+```{r,message=FALSE}
+library(tidyverse)
+```
+
+# intro
+<div dir="rtl">
+רצף אותיות הוא string
+</div>
+```{r}
+string1 <- "This is a string"
+```
+<div dir="rtl">
+יצירת ווקטור של string
+</div>
+```{r}
+c("one", "two", "three")
+
+string2 <- 'If I want to include a "quote" inside a string, I use single quotes'
+```
+<div dir="rtl">
+מירכאות משמשות ליצירת string, לכן כאשר רוצים להזין מירכאות לתוך string, צריך לסמן לתוכנה שרוצים אותן במפורש.      
+לוכסן (backslash `\`)  משמש כ- escape האומר לתוכנה שהסימן שמגיע אחריו איננו סימן מיוחד.
+ </div>
+
+
+```{r}
+double_quote <- "\""        # or '"'
+double_quote
+
+single_quote <- '\''        # or "'"
+single_quote
+```
+<div dir="rtl">
+הלוכסן משמש כ-escape גם לעצמו
+</div>
+
+
+```{r}
+backslash <- "\\"
+backslash
+
+View(backslash)
+```
+<div dir="rtl">
+הגרסה המודפסת של הסטרינג היא לא כמו הסטרינג עצמו. הגירסה המודפסת מראה גם את ה escapes.    
+
+על מנת לראות את התכולה של הסטרינג אפשר להשתמש בפונקציה `writeLines`
+</div>
+
+```{r}
+writeLines(double_quote)
+
+writeLines(single_quote)
+
+writeLines(backslash)
+```
+# special symbols  
+<div dir="rtl">
+יש סמלים מיוחדים כגון: 
+</div>
+new line is `"\n"`   
+tab is `"\t"`   
+
+```{r}
+newline <- "my name is\n Eviatar"
+
+newline
+
+cat(newline)
+
+name <- 'Eviatar'
+my_hobby <- "playing ping pong"
+
+cat("my name is", name,"\n","and I like","\t", my_hobby)
+```
+<div dir="rtl">
+כדי לראות את רשימת הסמלים השמורים הקלידו: 
+</div>
+```{r, eval=FALSE}
+?'"'
+```
+
+# useful functions strinr  
+<div dir="rtl">
+בכדי לחבר סטרינג יחדיו
+</div>
+```{r}
+str_c("x", "y", "z")
+
+str_c("x", "y", "z", sep = " ? ")
+
+# To collapse a vector of strings into a single string, use collapse:
+str_c(c("x", "y", "z"), collapse = ",")
+```
+<div dir="rtl">
+לסנן חלק מסטרינג
+</div>  
+```{r}
+x <- c("Apple", "Banana", "Pear")
+
+str_sub(x, 1, 3)
+
+# negative numbers count backwards from end
+str_sub(x, -3, -1)
+```
+If the string is short, `str_sub()` will return as much as possible:
+```{r}
+str_sub("abc", 1, 5)
+```
+<div dir="rtl">
+החלפת ערך בסטרינג
+</div>
+```{r}
+x
+
+str_to_lower(str_sub(x, 1, 1))
+
+str_sub(x, 1, 1) <- str_to_lower(str_sub(x, 1, 1))
+
+x
+```
+there's also `str_to_upper()` or `str_to_title()`
+  
+    
+<div dir="rtl">
+זיהוי תבניות באמצעות `str_detect`
+</div>
+```{r}
+fruit <- c("pinapple",  "banana", "apple", "pear" )
+
+str_detect(fruit, "ap") 
+```
+<div dir="rtl">
+התוצאה היא וקטור לוגי. זה נוח לסינון שורות מטבלה.    
+</div>
+```{r}
+(df <- data.frame(fruit = fruit, id = 1:4))
+
+filter(df, str_detect(fruit, "ap"))
+
+# its the same as:
+filter(df, c(T, F, T, F))
+```
+
+<div dir="rtl">
+מרבית השמות של הפונקציות בחבילה stringr כתובות בתבנית:
+</div>
+`str_doSomthing`
+<div dir="rtl">
+בפונקציות אלה יש ארגומנט pattern  בו מזינים את התבנית שרוצים לזהות. אם רוצים שליטה על מאפיינים נוספים בזיהוי התבנית, ניתן להשתמש בפונקציה `regex`.
+</div>
+
+```{r}
+str_detect(c("Banana", "banana"), regex(pattern = "ba", ignore_case = T))
+```
+<div dir="rtl">
+מציאת מיקום של תבנית בתוך הסטרינג באמצעות `str_which`    
+גם בדרך זו ניתן לסנן שורות מטבלה.  
+</div>
+
+```{r}
+str_which(fruit, "ap") 
+
+df[str_which(fruit, "ap"),]
+```
+<div dir="rtl">
+`str_locate` נותן מטריצה של מיקום התחלה וסיום של התבנית
+</div>
+```{r}
+str_locate(fruit, "ap") 
+```
+<div dir="rtl">
+אפשר לסנן עמודה מהמטריצה
+</div>
+```{r}
+fruit
+str_locate(fruit, "ap")[, 1]
+```
+<div dir="rtl">
+אפשר למצוא את כל התבניות המתאימות
+</div>
+```{r}
+str_locate_all(fruit, "na") 
+```
+<div dir="rtl">
+נשים לב שקיבלנו list. יש כמה פונקציות אשר שמותיהן כתובות בתבנית: 
+</div>
+`str_DoSomting_all()`
+<div dir="rtl">
+פונקציות אלה בד"כ מחזירות list.    
+  
+<br>    
+    
+החלף חלק בסטרינג
+</div>
+```{r}
+str_replace(fruit, "na", "xxx")
+
+# you can replace with nothing: 
+str_replace(fruit, "na", "")
+
+```
+<div dir="rtl">
+פיצול לחלקים
+</div>
+```{r}
+x <- c("Eviatar, Guttman", "julius, caesar, the third")
+
+str_split(x, pattern = ", " )
+
+```
+
+<div dir="rtl">
+דוגמאות נוספות
+</div>
+```{r}
+df %>% mutate(yello_fruit = str_match(fruit, "na"))
+
+str_length(c("a", "R for data science", NA))
+
+str_sort(fruit) # sort by abc
+
+str_subset(fruit, pattern =  "ap") # subset string that match the pattern
+
+str_count(fruit, "na") # count matched patterns
+```
+
+
+<div dir="rtl">
+
+</div>
+
+
+# generalize match
+# regular expressions
+<div dir="rtl">
+regular expressions זו שפה תמציתית לתיאור תבניות בסטרינז.  
+השפה מאפשרת להכליל את תבנית הטקטס שאנו מחפשים.  
+</div>
+## example    
+<div dir="rtl">
+נחלץ מספר טלפון מתוך string ונהפוך אותו לנומרי
+</div>
+```{r}
+x <- "my phone is 054-6450611"
+  
+(x <- str_extract(x, "\\d+-\\d+"))
+  
+(x <- str_remove(x, "-") )
+
+parse_double(x)
+
+
+# using the pipe: 
+"my phone is 054-6450611" %>%
+  str_extract( "\\d+-\\d+") %>%
+  str_remove("-") %>%
+  parse_number()
+```
+
+## basic matches
+
+<div dir="rtl">
+  השתמש ב "." כדי להתאים סימן כלשהו לפני ואחרי
+</div>
+```{r}
+x <- c("apple", "banana", "pear")
+
+str_extract(x, ".a.")
+
+str_extract(x, "..a")
+
+str_extract(x, "a..")
+```
+<div dir="rtl">
+כדי למצוא התאמה לנקודה עצמה, נשתמש בלוכסן.   
+אבל,  הלוכסן משמש כ- escape גם ב- regular expressions. לכן צריך לשים שני לוכסנים:
+</div>
+
+```{r}
+x2 <- c("abc.def", "abcdef")
+```
+
+
+```{r, error=TRUE}
+str_extract(x2, "c\.")          # don't work
+```
+
+```{r}
+str_extract(x2, "c\\.")         # match the "c" and the "."
+
+str_extract(x2, ".c\\..")       # match also whats' coming after
+```
+
+<div dir="rtl">
+`d` יתאים לכל ספרה, `D` יתאים לכל מה שאינו ספרה
+</div>
+```{r}
+str_extract_all("1a + 2b = 3c", "\\d")[[1]]
+
+str_extract_all("1a + 2b = 3c", "\\D")[[1]]
+```
+<div dir="rtl">
+`+` ינסה לחבר התאמות שבאות לאחר מכן יחדיו
+</div>
+```{r}
+str_extract_all("1a + 2b = 3c", "\\D+")[[1]]
+```
+
+`\s` will match any space
+```{r}
+text <- "Some  \t badly\n\t\tspaced  text"
+
+writeLines(text)
+
+str_replace_all(text, "\\s", " ")
+
+str_replace_all(text, "\\s+", " ")
+
+```
+
+`\w` matches any “word” character, which includes alphabetic characters
+```{r}
+str_extract_all("Don't eat that!", "\\w+")[[1]]
+```
+
+`\b` matches beginning and ending of a string
+```{r}
+str_replace_all("The quick brown fox", "\\b", "__")
+```
+
+You can also create your own character classes using []:
+  
+extract a or b or c: 
+```{r}
+str_extract_all(c("abc", "bce"), pattern = "[abc]")
+
+str_extract_all(c("abc", "bce"), pattern = "[abc]+")
+
+str_extract_all(c("abc", "bce"), pattern = "[abc]") %>%
+  map_chr(~ str_c(.x, collapse = "")) # we'll learn that in 'Iteration'. 
+```
+
+
+another way of extracting digits: 
+```{r}
+str_extract("evitar guttman 0546-450611", pattern = "[:digit:]+")
+
+str_extract_all("evitar guttman 0546-450611", pattern = "[:digit:]+")
+```
+
+<div dir="rtl">
+אפשר להשתמש ב | כדי לבחור באחד משתי אפשרויות:
+</div>
+
+```{r}
+str_extract(c("grey", "gray"), "gr(e|a)y")
+```
+<div dir="rtl">
+הסרת רווחים מיותרים
+</div>
+```{r}
+str_trim("  spece   before and after  words   ")
+
+str_squish("  spece   before and after  words   ") # reduce repeated spaces
+```
+
+
+<div dir="rtl">
+  ישנן פונקציות BaseR המאפשרות להזין ארגומט של תבנית טקסט:  
+</div>
+  `list.files`, `ls`
+
+```{r}
+list.files()
+
+# has pattern "anything attached to Rmd"
+list.files(pattern = ".Rmd")
+
+# starts with 4 and followed by a or b
+list.files(pattern = "^4(a|b)")
+
+# te.h or te.R
+list.files(pattern = "te\\.(h|R)")
+
+```
+
+
+<div dir="rtl">
+דוגמא נוספת לטיפול במספר טלפון
+</div>
+```{r}
+str_replace_all("00-972-54-6450611", "-", "")
+
+str_replace_all("phone 00-972-54-6450611", "phone|-", "")
+```
+<div dir="rtl">
+נוסיף רווח אחרי המילה phone
+</div>
+
+```{r}
+str_replace_all("phone 00-972-54-6450611", "phone |-", "")
+
+str_replace_all(" 00 972 54  6450611", " ", "")
+
+str_extract_all(" eviatar 00 972 54  6450611", "[[:digit:]]+")
+
+str_extract_all(" eviatar 00 972 54  6450611", "[[:digit:]]+")[[1]] %>% str_c(collapse = "")
+
+
+str_extract_all(" eviatar 00 972 54  6450611 phone", "[[:alpha:]]+")
+```
+
+
+<div dir="rtl">
+
+</div>

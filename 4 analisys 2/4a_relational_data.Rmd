@@ -1,0 +1,404 @@
+---
+title: "Data Analisys part 2"
+subtitle: "lession 4"
+author: "Eviatar Guttman"
+date: "Last updated: `r format(Sys.time(), '%d-%m-%Y')`"  
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: no
+    smooth_scroll: yes
+    fig_caption: yes
+    highlight: tango
+    theme: flatly
+    css: ../style.css
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+---  
+```{r setup, include = F}
+# global chunk options
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = T,
+                      message = T,
+                      tidy=TRUE,
+                      fig.align = 'center',
+                      collapse = TRUE)
+
+# don't show NA's in tables
+options(knitr.kable.NA = '')
+
+```
+
+```{r}
+library(tidyverse)
+library(nycflights13)
+options(max.print = 40)
+options(tibble.print_min = 5)
+```
+
+# Relational data
+## motivation
+<div dir="rtl">
+
+</div>
+
+<div dir="rtl">
+ניקח טבלת נתונים מוקטנת
+</div>
+```{r}
+(flights2 <- flights %>% select(year:day,tailnum, carrier))
+```
+<div dir="rtl">
+השמות המלאים של חברות הטיסה שמורים בטבלת נתונים אחרת
+</div>
+
+```{r}
+airlines
+```
+<div dir="rtl">
+נרצה להוסיף את השמות המלאים לטבלת הנתונים
+</div>
+
+```{r}
+left_join(flights2, airlines)
+```
+<div dir="rtl">
+הפונקציה `left_join` מצאה עמודה משותפת "carrier" בין שתי הטבלאות וחיברה את הטבלאות ע"ס עמודה זו.   
+ניתן לבחור ע"ס איזו עמודה לחבר בין הטבלאות. 
+</div>
+```{r}
+left_join(flights2, airlines, by = "carrier")
+```
+<div dir="rtl">
+את החיבור הזה ניתן לעשות גם עם `match`.
+</div>
+```{r}
+flights2 %>%
+  mutate(name = airlines$name[match(flights2$carrier, airlines$carrier)])
+
+```
+<div dir="rtl">
+`match` מחזיר וקטור עם מיקום ההתאמה הראשונה של הארגומנט הראשון עם הארגומנט השני.
+</div>
+```{r}
+match(flights2$carrier, airlines$carrier)
+
+# we subset the airline$name with repetitions:
+airlines$name[match(flights2$carrier, airlines$carrier)] 
+
+# as we learned in subseting, if: 
+x <- 1:3
+
+# we can subset it like this: 
+x[c(1,1,1,1,2,2,2,3,3)]
+
+
+```
+
+<div dir="rtl">
+`match` עובד בדוגמא זו משום שאנו משתמשים בשידוך טבלאות הנתונים ע"ס עמודה אחת בלבד. `join` מאפשר לעשות match ע"ס יותר מעמודה אחת. 
+</div>
+
+## understand join  
+<div dir="rtl">
+נבין איך join עובד
+</div>
+```{r echo=FALSE, out.width='40%'}
+knitr::include_graphics('4_images/join2.PNG')
+```
+<div dir="rtl">
+נעבוד עם שתי טבלאות קטנות
+</div>
+
+```{r, eval=T}
+(x <- tribble(
+  ~key, ~val_x,
+  1, "x1",
+  2, "x2",
+  3, "x3" ))
+
+(y <- tribble(
+  ~ key, ~ val_y,
+  1, "y1",
+  2, "y2",
+  4, "y3"))
+```
+
+<div dir="rtl">
+`inner_join` משאיר רק שורות שנמצאה להן התאמה בשתי הטבלאות
+</div>
+
+```{r echo=FALSE, out.width='60%'}
+knitr::include_graphics('4_images/join3.PNG')
+```
+
+```{r}
+inner_join(x, y)
+```
+<div dir="rtl">
+עמודת ה -`key` חייבת להיות בדיוק אותו הדבר. שתיהן צריכות להיות נומריות או כ-character. 
+</div>
+```{r, error=TRUE}
+y2 <- y  %>% mutate(key =as.character(key))
+inner_join(x, y2)
+```
+
+<div dir="rtl">
+אם הערכים ברכיבי הווקטור לא זהים, הנתונים לא יאוחדו.   
+למשל, נוסיף רווח לפני אחד הערכים באחת הטבלאות: 
+</div>
+
+```{r}
+x2 <- x %>% mutate(key = as.character(key))
+
+x2$key[x2$key == "1"] <- " 1" # note the space before the 1
+
+x2
+
+inner_join(x2, y2)
+
+```
+## other joins  
+<div dir="rtl">
+`left_join` שומר את כל התצפיות של הטבלה השמאלית.  
+`right_join` שומר את כל התצפיות מהימנית.   
+`full_join` שומר את כל התצפיות משתי הטבלאות. 
+</div>
+
+
+```{r echo=FALSE, out.width='60%'}
+knitr::include_graphics('4_images/join5.PNG')
+```
+
+```{r}
+# A left join keeps all observations in x.
+left_join(x, y)
+
+# A right join keeps all observations in y.
+right_join(x, y)
+
+
+# A full join keeps all observations in x and y.
+full_join(x, y)
+
+# image join 6
+```
+
+```{r echo=FALSE, out.width='60%'}
+knitr::include_graphics('4_images/join6.PNG')
+```
+<div dir="rtl">
+ה- join הנפוץ ביותר הוא `left_join`. משתמשים בו כאשר מחפשים מידע נוסף בטבלה אחרת, משום שהוא שומר על המידע המקורי ללא שינוי גם כאשר אין התאמה בין הטבלאות. 
+</div>
+```{r, echo=FALSE}
+rm(x, x2, y, y2)
+```
+
+## Duplicate keys
+<div dir="rtl">
+מה קורה כאשר ה-keys לא ייחודיים?     
+  
+1. בטבלה אחת יש כפילויות ב-keys.   
+מצב זה שימושי כאשר יש יחס של one to many כפי שעשינו בדוגמא של ה flights
+</div>
+
+
+```{r echo=FALSE, out.width='60%'}
+knitr::include_graphics('4_images/join7.PNG')
+```
+<div dir="rtl">
+בתרשים, עמודת ה-key בטבלה x לא מזהה תצפיות באופן ייחודי. לטבלה x אין מזהה ייחודי לכל תצפית. 
+</div>
+
+```{r,}
+(x <- tribble(
+  ~key, ~val_x,
+  1, "x1",
+  2, "x2",
+  2, "x3",
+  1, "x4" ))
+
+(y <- tribble(
+  ~key, ~val_y,
+  1, "y1",
+  2, "y2" ))
+
+left_join(x, y, by = "key")
+```
+
+<div dir="rtl">
+2. אם בשתי הטבלאות יש כפילויות בעמודת ה –keys זו בד"כ טעות.   
+בדוגמא, בשתי הטבלאות אין מזהה ייחודי לתצפיות.  כאשר מחברים בין טבלאות עם כפילויות ב-keys, מקבלים את כל השילובים האפשריים. (מכפלה קרטזית)
+</div>
+
+```{r echo=FALSE, out.width='60%'}
+knitr::include_graphics('4_images/join8.PNG')
+```
+
+
+```{r}
+x <- tribble(
+  ~key, ~val_x,
+  1, "x1",
+  2, "x2",
+  2, "x3",
+  3, "x4")
+
+y <- tribble(
+  ~key, ~val_y,
+  1, "y1",
+  2, "y2",
+  2, "y3",
+  3, "y4")
+
+left_join(x, y, by = "key")
+```
+
+<div dir="rtl">
+זה קורה גם כאשר יש ערכים חסרים
+</div>
+
+```{r}
+x2 <- tribble(
+  ~key, ~val_x,
+  1,  "x1",
+  NA, "x2",
+  NA, "x3",
+  3,  "x4")
+
+y2 <- tribble(
+  ~key, ~val_y,
+  1,  "y1",
+  NA, "y2",
+  NA, "y3",
+  3,  "y4")
+
+left_join(x2, y2, by = "key")
+```
+
+## several key columns
+```{r}
+# Take a small data:
+(flights2 <- flights %>% 
+  select(year:day, hour, origin, dest, tailnum, carrier))
+
+# Here is the weather data: 
+weather
+
+# several columns shered in both data set. 
+intersect(names(flights2), names(weather))
+
+left_join(flights2, weather,  by = c("year", "month", "day", "hour", "origin"))
+```
+
+<div dir="rtl">
+אם המשתמש לא מגדיר את הארגומנט `by` אז הפונקציה תחפש את כל העמודות אשר יש להן שם זהה בשתי הטבלאות.   
+יש לוודא שלא מתבצע חיבור טבלאות ע"ס עמודות עם אותו השם אך עם משמעות שונה.     
+למשל, גם בטבלה `flights` וגם בטבלה `planes` יש את העמודה `year`, אך משמעותן שונה ואנו יכולים לחבר בין טבלאות אלה רק ע"ס העמודה `tailnum`.
+</div>	
+
+```{r}
+planes
+
+flights2 %>% 
+  left_join(planes, by = "tailnum")
+```
+<div dir="rtl">
+כעת יש עמודה `year.x` אשר הגיע מהטבלה השמאלית, ועמודה `year.y` שהגיע מהטבלה הימנית. 
+</div>
+```{r}
+flights2 %>% 
+  left_join(planes, by = "tailnum", suffix = c("_original_data", "_supplemented"))
+```
+
+## different column names
+<div dir="rtl">
+נחבר בין `flights` לבין  `airport` המכילה נתונים על מיקומים (lat and lon) של שדות תעופה. 
+</div>
+```{r}
+flights2 %>% 
+  left_join(airports, c("dest" = "faa"))
+
+flights2 %>% 
+  left_join(airports, c("origin" = "faa"))
+```
+
+## anti_join  
+<div dir="rtl">
+`anti_join` זורק את כל התצפיות ב-x אשר לה היה להן שידוך ב-y.  
+זה שימושי כדי למצוא תצפיות שלא היה להן שידוך. 
+</div>
+
+```{r echo=FALSE, out.width='60%'}
+knitr::include_graphics('4_images/join9.PNG')
+```
+<div dir="rtl">
+כאן, אנו מוצאים מטוסים מתוך `flights` אשר לא מופיעים בנתוני ה-`planes`. 
+</div>
+```{r}
+flights %>%
+  anti_join(planes, by = "tailnum") %>%
+  count(tailnum, sort = TRUE)
+```
+## semi_join  
+<div dir="rtl">
+`semi_join` שומר על כל התצפיות ב-x אשר נמצא להן שידוך ב-y.    
+  
+זה שימושי בכדי לסנן תצפיות ע"ס כמה עמודות. 
+למשל, חשוב על מצב בו מצאת את עשרת היעדים הפופולאריים ביותר. 
+</div>
+```{r}
+top_dest <- flights %>%
+  count(dest, sort = TRUE) %>%
+  head(10)
+
+top_dest
+```
+<div dir="rtl">
+כעת רוצים למצוא כל טיסה אשר טסט לאותם יעדים. 
+</div>
+```{r}
+flights %>% 
+  filter(dest %in% top_dest$dest)
+```
+<div dir="rtl">
+נכליל זאת למספר עמודות:   
+נניח שמצאו את 10 הימים בהם ישנם העיכובים הגדולים ביותר. כיצד נבנה filter המשתמש ב-`year, month, date` בכדי לשדך זאת חזרה לאותן טיסות? 
+</div>
+```{r}
+flights %>% 
+  semi_join(top_dest)
+```
+<div dir="rtl">
+`semi_join` לא מכפיל שורות אף פעם. רק הקיום של שידוך הוא שחשוב. זה לא משנה איזו תצפיות שודכה. 
+</div>
+```{r echo=FALSE, out.width='60%'}
+knitr::include_graphics('4_images/join10.PNG')
+```
+<div dir="rtl">
+נשים לב שבדיקה של מספר השורות לפני ואחרי שידוך טבלאות לא מספיק כדי לוודא שהשידוך בוצע כהלכה. למשל, אם יש `inner_join` בין שתי טבלאות אשר בשתיהן יש כפילות ב-keys, ייתכן מצב בו מספר השורות שהושמט יהיה זהה בדיוק למספר השורות שהוכפלו!
+</div>
+
+
+
+
+
+
+
+
+## exercises  
+<div dir="rtl">
+1) אנו יודעים שחלק מימות השנה הם "ימים מיוחדים" ומספר האנשים שטסים בימים אלה שונה משמעותית מימי שיגרה. כיצד תייצג את המידע הזה ב-data.frame? מה יהיו העמודות ה-keys שיאפשרו שידוך המידע הזה לנתוני ה-`flights`? כיצד תחבר זאת לטבלת הנתונים?   
+2) הוסף לכל יעד נסיעה (origin and destination) את המיקומים שלו – (lat and lon) מתוך טבלת ה-`airports`. שים לב שעליך לשדך פעמיים את אותם הנתונים. מה תעשה עם שמות המשתנים?   
+3) האם יש קשר בין גיל המטוס לבין  האיחורים שלו?   
+4) מה זה אומר עבור טיסה שיהיה לה ערך חסר ב-`tailnum`? מה משותף בין הערך החסר של ה-`tailnum` לבין מטוסים אשר ה- `tailnum` שלהם לא קיים בטבלת ה-`planes`?   
+5) סנן טיסות עבור מטוסים שטסו 100 פעמים לפחות.   
+6) מצא את 48 השעות בהן היו האיחורים הגרועים ביותר. הצלב נתונים אלה עם טבלת הנתונים `weather`. מה מצאת?   
+</div>
+
+
+
