@@ -1,0 +1,1065 @@
+---
+title: "Data Analisys part1"
+subtitle: "lession 3"
+author: "Eviatar Guttman"
+date: "Last updated: `r format(Sys.time(), '%d-%m-%Y')`"  
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: no
+    smooth_scroll: yes
+    fig_caption: yes
+    highlight: tango
+    theme: flatly
+    css: ../style.css
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+---  
+
+```{r setup, include = F}
+# global chunk options
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = T,
+                      message = T,
+                      error = T,
+                      tidy=TRUE,
+                      fig.align = 'center',
+                      collapse = TRUE)
+
+# don't show NA's in tables
+options(knitr.kable.NA = '')
+
+```
+
+```{r}
+library(tidyverse)
+options(tibble.print_min = 5)
+```
+
+# tidy data
+<div dir="rtl">
+
+Tidy data מקיים שלושה תנאים:       
+1.	כל משתנה חייב להיות בעמודה משלו    
+2.	כל תצפיות חייבת להיות בשורה משלה    
+3.	כל ערך חייב להיות בתא (cell) משלו    
+  
+היתרונות בעבודה עם Tidy data הם:     
+1.	עקביות    
+2.	R  היא שפה וקטורית    
+3.	קבוצת החבילות tidyverse  בנויות לעבוד עם tidy data.     
+  
+להלן כמה דוגמאות:   
+
+</div>
+
+
+
+```{r, error = T}
+# Tidy data
+table1 
+
+
+# Needs 2 variables: cases and population
+table2  
+
+
+# Needs separation of rate into cases and population
+table3 
+
+
+# Separated into 2 tables.
+table4a
+
+table4b 
+```
+  
+  
+  
+# Pipes  
+```{r}
+library(magrittr)
+```
+
+##  %>% 
+  
+<div dir="rtl">
+ה-pipe מסייע לכתוב קוד באופן קל ומובן.   
+נחשוב על שלוש דרכים לבצוע משימה:   
+</div>
+  
+__Example 1:__  
+  
+1. Saving objects one one for each function call.
+  
+```{r}
+(x1 <- 1:10)
+
+(x2 <- mean(x1))
+
+(x3 <- round(x2))
+
+(x4 <- x3^2)
+```
+Its like we did:   
+$$x$$
+$$y = f_1(x)$$
+$$g = f_2(y)$$
+$$h = f_3(g)$$
+
+<div dir="rtl">
+זה טוב לתכנות כאשר רוצים לוודא מה מקבלים בתוצאות הביניים.
+</div>
+
+
+2. Nesting functions
+```{r}
+(round(mean(1:10)))^2
+```
+
+$$f_3(f_2(f_1(x)))$$
+<div dir="rtl">
+מאד תמציתי, אבל קשה לקרוא.
+</div>
+
+3. Piping
+```{r}
+1:10 %>% mean() %>% round() %>% .^2
+
+# taking care of NA values: 
+c(1:10, NA) %>% mean(na.rm = T) %>% round() %>% .^2
+```
+$$ x \rightarrow  f_1(x) \rightarrow f_2(y) \rightarrow f_3(g) \rightarrow h$$
+
+<div dir="rtl">
+מאד ארוך, אבל קל לקריאה.   
+ב-data science פעמים רבות אנו רוצים לשרשר הרבה פעולות זו אחר זו.   
+</div>
+
+<br><div dir="rtl">
+ישנן פונקציות בהן הארגומנט של ה- data אינו הארגומנט הראשון בפונקציה. לשם כך, מחליפים את שם ה- `data.frame` 
+__בנקודה__ __.__      
+    
+לדוגמא, הפונקציה `lm` מחשבת את האומדים של  מודל רגרסיה ליניארית.  
+בפונקציה זו, הארגומנט הראשון הוא הנוסחה, והארגומנט השני הוא ה-data.   
+</div>
+
+
+
+```{r}
+lm(formula = mpg ~ wt, data = mtcars)
+```
+using the pipe we write: 
+```{r, eval=F}
+mtcars %>% lm(mpg ~ wt,data =  .) 
+
+mtcars %>% lm(mpg ~ wt, .) 
+# data is the first argument in the function. if it matches. no need to call the argument. 
+```
+
+__example 2__  
+<div dir="rtl">
+הפעם לצורך הדוגמא נשתמש ב-`dplyr`.  
+</div>
+
+
+<div dir="rtl">
+כעת, נחשב ב-data הנקרא mtcars את ממוצע צריכת הדלק לכלי רכב עם 4 צילינדרים בחלוקה לפי מספר ההילוכים בתיבת ההילוכים.
+נעשה זאת בשלושה שלבים:   
+1. באמצעות `filter`, נסנן את תצפיות עבור כלי רכב עם מנוע בן 4 צילינדרים.    
+2. באמצעות `group_by`, נחלק את בסיס הנתונים למספר תתי-בסיסי נתונים לפי מספר ההילוכים בתיבת ההילוכים.    
+3. באמצעות `summarize`, נחשב עבור כל קבוצה את צריכת הדלק הממוצעת.   
+  
+כך נראות השורות הראשונות בטבלת הנתונים:
+</div>
+```{r}
+head(mtcars)
+```
+
+
+1. Saving objects one one for each function call.    
+```{r}
+cyl4 <- filter(mtcars, cyl == 4)
+
+cyl4_group <- group_by(cyl4, gear)
+
+output <- summarize(cyl4_group, mean_mpg = mean(mpg))
+
+output
+```
+2. Nesting functions.
+```{r}
+summarize(group_by(filter(mtcars, cyl==4), gear), mean_mpg = mean(mpg))
+```
+3. Piping    
+```{r}
+mtcars %>% filter(cyl == 4) %>% group_by(gear) %>% summarize(mean_mpg = mean(mpg))
+```
+
+## additional operators:
+__%$%__  
+
+
+Some functions, e.g `lm()` , have a data argument, which allows the direct use of names inside the data as part of the call. Other functions like `cor()` or `var()` don't.  
+This operator exposes the contents of the left-hand side object to the expression on the right to give a similar benefit, see the examples.
+
+__example:__   
+`cor()` is a function that accepts vectors in its input
+```{r, error=T, warning=T}
+cor(mtcars$mpg, mtcars$wt)
+
+mtcars %>% cor(mpg, wt)
+
+# This should do it: 
+mtcars %$% cor(mpg, wt)
+```
+
+__%<>% assignment__
+<div dir="rtl">
+האופרטור `%<>%` מבצע assignment לבסיס הנתונים ומחליף את האופרטור `<-`.  
+הוא מאפשר להחליף את הקוד הזה:   
+</div>
+
+```{r}
+df <- mtcars
+
+df <- df %>% mutate(new_var = gear * carb)
+
+# and also to
+df <- mutate(df,new_var = gear * carb )
+
+
+```
+
+<div dir="rtl">
+בקוד הזה: 
+</div>
+
+```{r}
+df %<>% mutate(new_var = gear * carb)
+```
+
+<div dir="rtl">
+כאשר קוראים לחבילה `dplyr` באמצעות `library(dplyr)` או באמצעות `library(tidyverse)`, האופרטור  ה-pipe  הרגיל `%>%` מחבילת ה `maggritr` עולה גם כן.   
+אופרטור ה-`%<>%` לא עולה יחד עם `dplyr`.   
+  
+Hadly Wickham חושב שאופרטור ה-assignment   הוא מיוחד וצריך להיות מזוהה בקלות כאשר משתמשים בו. 
+</div>
+
+
+# dplyr
+## introduction
+<div dir="rtl">
+ארבע הפונקציות העיקריות ב-`dplyr` הן: 
+`filter`, `select`, `mutate`, `summarize`.  
+  
+פונקציות אלה עובדות בשילוב עם `group_by`.  
+בפונקציות אלה:   
+1. הארגומנט הראשון הוא ה-data. (אם משתמשים ב-pipe אז אפשר לוותר על ארגומנט זה)  
+2. הארגומנטים השני ואילך מתארים מה לעשות עם ה- data frame תוך שימוש בשמות המשתנים (ללא quotes).  
+3. ה-`class` של האובייקט שהפונקציות הללו מחזירות הוא תמיד `data.frame`.    
+אם בסיס הנתונים הוא tidy, שימוש ב-`%>%`  מאפשר לשרשר בקלות מספר רב של ביטויים פשוטים כדי להגיע לתוצאות מורכבות.     
+  
+אנו נשתמש בשני בסיסי נתונים:  
+`flights` מתוך החבילה `nycflights13` ובה נתוני טיסות שיצאו מנמלי התעופה בניו-יורק בשנת 2013.  
+לדוגמאות מסוימות נשתמש ב- `billboard` ובה נתוני מצעד 100 השירים המצליחים ב-billboard בשנת 2000.   
+הנה השורות הראשונות של `flights`: 
+</div>
+
+```{r}
+(flights <- nycflights13::flights)
+
+names(flights)
+```
+
+working with a smaller data
+```{r}
+f1 <- flights[1:6]
+```
+
+## filter
+filter rows with `filter`.  
+  
+Use `,` or `&` is the same. 
+```{r eval=T}
+filter(f1, month == 1, day == 1)
+```
+
+Its the same as:
+
+```{r eval=F}
+filter(flights, month == 1 & day == 1)
+```
+
+or is `|`
+```{r, eval = F}
+filter(flights, month == 1 | month == 2)
+```
+<div dir="rtl">
+דרך אחרת לקבל את אותה תוצעה היא בשימוש ב-`%in%`: 
+</div>
+
+```{r eval=FALSE}
+filter(flights, month %in% c(1,2))
+```
+<div dir="rtl">
+
+</div>
+```{r eval=FALSE}
+filter(flights, month %in% 1:3)
+```
+<div dir="rtl">
+כל פונקציה שתיצור ווקטור לוגי תאפשר לסנן את השורות באמצעותה.    
+  
+בדוגמא הבאה, ניצור ווקטור לוגי מחיפוש אחר שמות אמנים בטבלת נתוני ה-`billboard`:
+תחילה, נכיר את טבלת הנתונים:
+</div>
+```{r}
+b1 <- billboard[1:10]
+head(b1)
+```
+
+```{r}
+# create a logical vector:
+b1 %$% str_detect(artist, pattern =  "Jay|Joe") %>% tail(10) 
+
+# find Jay or Joe by insert the logical vector into filter: 
+filter(b1, str_detect(artist, "Jay|Joe")) 
+```
+<div dir="rtl">
+כדאי לזכור את כללי de-morgan.
+</div>
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics('3_images/deMorgan.PNG')
+```
+  
+!(x & y) is the same as !x | !y, and !(x | y) is the same as !x & !y. 
+
+Two equivalents: 
+```{r eval = F}
+filter(flights, !(arr_delay > 120 | dep_delay > 120)) 
+
+# same as
+filter(flights, arr_delay <= 120, dep_delay <= 120)
+```
+
+<div dir="rtl">
+אילו רצינו לסנן את השורות באמצעות `baseR` היינו כותבים זאת כך: 
+</div>
+```{r eval = F}
+flights[flights$arr_delay <= 120 & flights$dep_delay <= 120, ]
+
+```
+<div dir="rtl">
+`dplyr`  משחררת אותנו מהשימוש ב-`$`. בתוך הפונקציה אפשר לקרוא לעמודות בטבלת הנתונים כאילו היו ב-environment. לתכונה זו קוראים data masking.   
+בסינון השורות באמצעות `baseR` למעשה כתבנו שני תנאים לוגיים. במקום בו שני התנאים מתקיימים השורה הרלוונטית תסונן.    
+</div>
+```{r}
+head(flights$arr_delay <= 120 & flights$dep_delay <= 120)
+```
+
+  
+__filter NA's__
+
+```{r}
+(df <- data.frame(x = c(1, NA, 3)))
+
+filter(df, x > 1)
+```
+<div dir="rtl">
+`NA` לא מקיים תנאי לוגי, צריך לקרוא לו במפורש:  
+</div>
+```{r}
+filter(df, x > 1| is.na(x))
+```
+
+### exercise  
+<div dir="rtl">
+מצא את כל הטיסות ש:   
+1. שאיחרו יותר משעתיים.  
+2. שטסו ליוסטון (IAH  או HOU)  
+3. שאיחרו להגיע למעלה משעתיים אך לא איחרו לצאת.   
+4. שיצאו באיחור של למעלה משעה אך פיצו על לפחות חצי שעה מהאיחור בזמן אויר.   
+5. השתמשו בפונקציה `between` כדי למצוא את הטיסות שיצאו בין השעה חצות ל-6 בבוקר. (שימו לב שהשעה חצות מיוצגת בנתוני כ-2400) 
+
+</div>
+
+
+## arrange  
+<div dir="rtl">
+`arrange` ממיין את טבלת הנתונים.
+</div>
+```{r}
+arrange(f1, year, month, day) # first arrange year, then month and then day
+
+desc(1:5)
+
+arrange(f1, desc(dep_delay))
+```
+<div dir="rtl">
+ערכים חסרים תמיד יהיו בסוף הטבלה.
+</div>
+```{r}
+(df <- tibble(x = c(5, 2, NA)))
+
+arrange(df, x)
+
+arrange(df, desc(x))
+```
+
+### exercise  
+<div dir="rtl">    
+1. כיצד ניתן להשתמש ב-`arrange` כדי שתציא ערכים חסרים (`NA`) בהתחלה?  
+2. מיין את `flights` כדי למצוא את הטיסות שיצאו באיחור הגדול ביותר.  
+3. מצא את הטיסות שטסו במהירות הגבוהה ביותר (אין משתנה המציין את המהירות של הטיסה בנתונים)  
+
+</div>
+
+## select
+<div dir="rtl">
+בחר עמודות עם `select`.
+</div>
+```{r}
+(f2 <- f1[1:2,])
+
+# variables by name
+select(f2, year, month, day)
+```
+<div dir="rtl">
+אילו רצינו לעשות זאת ב-`baseR` היינו עושים זאת כך:
+</div>
+
+```{r}
+f2[c("year", "month", "day")]
+
+f2[, c("year", "month", "day")]
+```
+<div dir="rtl">
+ב-`dplyr` אין צורך לכתוב את שמות המשתנים בווקטור character. 
+  
+בחירת טווח עמודות:   
+</div>
+```{r}
+select(f2, year:dep_time)
+
+# Its better not use columns by index, the data may change.   
+select(f2, 1:4) 
+
+# de-select
+select(f2, -(year:dep_time))
+
+select(f2, -c(1:4))
+```
+<div dir="rtl">
+כמה דוגמאות תוך שימוש ב-`billboard`:
+</div>
+```{r}
+(b2 <- b1[1:2,])
+
+select(b2, starts_with("wk"))
+
+select(b2, ends_with('ist'))
+
+select(b2, contains("wk")) 
+
+select(b2,num_range("wk", 1:3)) 
+
+select(b2, matches("wk")) 
+
+# bring all vars with "wk" to the beginning and put everything after: 
+select(b2, matches("wk"), everything()) 
+```
+<div dir="rtl">
+שימוש בווקטור שמות כדי לקראו לעמודות באופן עקיף:
+</div>
+```{r}
+vars <- c("year", "month", "day", "dep_time")
+
+select(f2, vars) %>% head()
+```
+<div dir="rtl">
+אם אחד השמות חסר, ניתן להשתמש ב-`any_of`: 
+</div>
+```{r, error = T}
+vars <- c("year", "month", "day", "xyz")
+
+select(f2, vars)
+
+# any_of will fix it
+select(f2, any_of(vars))
+```
+
+### exercise   
+<div dir="rtl">
+1. חשוב על כמה שיותר דרכים לסנן את העמודות: `dep_time, dep_delay, arr_time arr_delay`.    
+2. מה קורה אם בוחרים באותה עמודה מספר פעמים?     
+3. בחן את הקוד הבא
+</div>
+
+```{r, eval=F}
+select(flights, contains("TIME"))
+```
+<div dir="rtl">
+האם התוצאה מפתיעה? בחן את הארגומנטים של `contains` ( tidyselect::contains)  כדי לשנות זאת.
+</div>
+
+
+
+
+## mutate
+<div dir="rtl">
+`mutate` תמיד יוצר עמודה חדשה בסוף הטבלה.  
+   
+שוב, לצורך הדוגמאות נעבוד עם בסיס נתונים מוקטן
+</div>
+```{r}
+(f3 <- select(flights,year:day, ends_with("delay"), distance, air_time) %>% .[1:2,])
+
+mutate(f3,
+       gain = dep_delay - arr_delay,
+       speed = distance / air_time * 60)
+```
+<div dir="rtl">
+אפשר להשתמש בעמודות שזה עתה נוצרו. (זה נובע מתכונה של R שנקראת Lazy evaluation שבה, ביטויים לא מחושבים אלא ברגע שהם נדרשים)
+</div>
+```{r}
+mutate(f3,
+       gain = dep_delay - arr_delay,
+       hours = air_time / 60,
+       gain_per_hour = gain / hours)
+```
+
+### exercise  
+<div dir="rtl">
+1. המשתנים `dep_time`  ו- `sched_dep_time` נוחים למבט אך לא נוחים לחישוב משום שאינם בעלי מספרים רציפים. המר את העמודות לפורמט אחר כך שיספרו את מספר הדקות מחצות. (כדאי להשתמש באופרטורים `%%, %/%`). 
+2. תוך שימוש בפונקצית `rank`, מצא את 10 הטיסות שהגיעו באיחור הגדול ביותר. כיצד ברצונך לטפל בשוויון בערכים? קרא את ה-`help` של `min_rank`.   
+</div>
+
+
+
+## usfull functions  
+<div dir="rtl">
+המאפיין החשוב הוא שהפונקציות חייבות להיות ווקטוריות.   
+הפונקציות מקבלות ווקטור ב-input, ומחזירות ווקטור באותו אורך ב-output.  
+אפשר גם לכתוב `x – sum(x)`  או `y – mean(y)`.
+</div>
+integer division:
+```{r}
+198:202 %/% 100 # remove the remainder 
+
+198:202 %% 100 # keep only the remainder
+```
+
+lead and lag
+```{r}
+(x <- 1:10)
+
+lag(x) 
+
+lag(x, n = 2) 
+
+# Allows to compare x with previous observations:
+x - lag(x)
+
+lead(x)
+
+# find when x changes:
+(x <- c(1,1,1,3,3,4,5))
+
+x != lag(x)
+```
+
+cumulative functions
+```{r}
+(x <- 1:10)
+
+cumsum(x)
+
+cumprod(x)
+
+cummin(x)
+
+cummax(x)
+
+cummean(x)
+```
+
+rank functions
+```{r}
+y <- c(1, 2, 2, NA, 3, 4)
+
+min_rank(y) # 1st 2nd 3rd and so forth
+
+dense_rank(y) # like min_rank but no gaps between ranks
+
+desc(y)
+
+min_rank(desc(y)) # in reverse order
+
+row_number(y)
+
+percent_rank(y) 
+
+cume_dist(y) # cumulative distribution
+```
+
+## summarize 
+<div dir="rtl">
+`summarize` מקפל את הטבלה לשורה אחת. 
+</div>
+```{r}
+summarise(flights, delay = mean(dep_delay, na.rm = TRUE))
+```
+<div dir="rtl">
+`summarize` לא יעיל במיוחד, אלא אם כן הוא בא בשילוב עם `group_by`. 
+זה משנה את היחידה המנותחת מכל טבלת הנתונים לתת-קבוצות של הטבלה. 
+</div>
+
+```{r echo=FALSE, out.width='60%'}
+knitr::include_graphics('3_images/group_by.PNG')
+```   
+  
+##  `group_by` with summerize   
+
+```{r}
+by_day <- group_by(flights, year, month, day)
+```
+<div dir="rtl">
+`by_day` זו טבלת נתונים שמחולקת לקבוצות.  
+כעת ניתן לחשב את ממוצע ה-`dep_delay` עבור כל יום בנפרד
+</div>
+```{r}
+summarise(by_day, delay = mean(dep_delay, na.rm = TRUE)) 
+```
+<div dir="rtl">
+`group_indices` יאמר לכם לאיזו קבוצה כל תצפית שייכת.  
+`group_vars` יאמר לכם על בסיס אילו משתנים הטבלה חולקה. 
+</div>
+```{r}
+group_indices(by_day) %>% head()
+
+group_vars(by_day)
+```
+<div dir="rtl">
+ה-`class` של האובייקט הוא הרחבה של `data.frame`.
+</div>
+```{r}
+class(by_day)
+```
+
+<div dir="rtl">
+מקור לטעויות הוא לא לדעת שטבלת הנתונים היא grouped ולנסות לבצע חישובים על כלל העמודה.   
+אם הטבלה היא grouped, וודאו שימוש ב- `ungroup` כדי להחזיר את טבלת הנתונים למצב התחלתי.   
+הטעות הזו מתרחשת בעיקר כאשר מחשבים grouped variable עם- `mutate` תוך assignment של התוצאה לבסיס נתונים.   
+הנה דוגמא: 
+</div>
+
+```{r}
+f1 %<>% group_by(year) %>% mutate(mean_dep_delay = mean(dep_delay, na.rm = T))
+
+f1
+
+class(f1)
+```
+<div dir="rtl">
+אפשר לתקן זאת עם `ungroup`
+</div>
+```{r}
+f1 %<>% ungroup()
+```
+<div dir="rtl">
+אפשר להשתמש באופרטור ה-`%>%`. בסוף השורה נוסיף את הפקודה `ungroup`.
+</div>
+
+```{r}
+f1 %<>% group_by(year) %>% mutate(mean_dep_delay = mean(dep_delay, na.rm = T)) %>% ungroup()
+
+class(f1)
+
+
+```
+
+<div dir="rtl">
+הנה דוגמא נוספת של שימוש ב-`%>%`   בנתוני `flights`.
+</div>
+```{r}
+flights %>% group_by(year, month, day) %>%  summarise(mean = mean(dep_delay))
+```
+<div dir="rtl">
+אותם כללים על ערכי `NA` מתקיימים גם בפונקציות סכימה: אם יש ערך חסר ב-Input, ה-output גם יהיה ערך חסר. אולם, לכל פונקציות הסכימה יש ארגומנט `na.rm` אשר מסיר את הערכים החסרים טרם החישוב. 
+</div>
+```{r}
+flights %>% group_by(year, month, day) %>% summarise(delay = mean(dep_delay, na.rm = TRUE))
+```
+<div dir="rtl">
+ניתן היה לעשות את החישוב הזה בשני שלבים. תחילה להסיר את הערכים החסרים מטבלת הנתונים, ולאחר מכן לחשב את הממוצע. 
+</div>
+```{r}
+not_cancelled <- flights %>%  filter(!is.na(dep_delay), !is.na(arr_delay))
+
+not_cancelled %>% group_by(year, month, day) %>% summarise(mean = mean(dep_delay))
+```
+
+## counts 
+<div dir="rtl">
+כאשר עושים סכימה, זה רעיון טוב לכלול ספירה של מספר השורות עליהן בוצעה הסכימה באמצעות `n()` או ספירה של ערכים שאינם חסרים באמצעות `sum(!is.na(x))`. 
+</div>
+### introduction  
+<div dir="rtl">
+נלמד קצת על התפלגות האיחורים של טיסות
+</div>
+```{r}
+not_cancelled %>% group_by(tailnum) %>%  # לקבץ את הנתונים לפי מטוסים . מספר המטוס הוא המספר המזהה שלו
+  summarise(delay = mean(arr_delay) ) %>% # נחשב עיכוב ממוצע לכל מטוס
+  ggplot(mapping = aes(x = delay)) + # נבחן את התפלגות ממוצעי האיחורים
+  geom_freqpoly()
+```
+<div dir="rtl">
+נראה שישנם מטוסים שהאיחור הממוצע שלהם הוא 300 דקות!  
+  
+  נוסיף משתנה הסופר את מספר הטיסות שכל מטוס עשה.
+</div>
+```{r}
+delays <- not_cancelled %>% 
+  group_by(tailnum) %>% 
+  summarise(
+    delay = mean(arr_delay, na.rm = TRUE),
+    n = n()) # counting the number of rows
+delays
+```
+
+<div dir="rtl">
+נציג היסטוגרמה של מספר הטיסות שכל מטוס עשה.
+</div>
+```{r}
+ggplot(delays, aes(x = n)) + geom_histogram(bins = 100)
+```
+
+<div dir="rtl">
+נציג `scatter plot` העיכוב הממוצע כפונקציה של מספר הטיסות.  
+ מטוסים עם עיכוב גדול, עשו מעט מאד טיסות. 
+</div>
+```{r}
+ggplot(data = delays, mapping = aes(x = n, y = delay)) + 
+  geom_point(alpha = 1/10)
+```
+
+<div dir="rtl">
+נסנן רק מטוסים שהופיעו בנתונים יותר מ-25 פעמים.
+</div>
+```{r}
+delays %>% filter(n > 25) %>% # filtering planes that appear more than 25 times
+  ggplot(mapping = aes(x = n, y = delay)) + 
+  geom_point(alpha = 1/10)
+```  
+  
+###  baseR subsetting    
+<div dir="rtl">
+אפשר להשתמש ב-subsetting של `baseR` כדי לחשב סיכום  על חלק מהנתונים.
+</div>
+```{r}
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  summarise(
+    avg_delay1 = mean(arr_delay),
+    avg_delay2 = mean(arr_delay[arr_delay > 0]) # the average positive delay
+  )
+```
+
+### Non scalar functions
+<div dir="rtl">
+`summarize` יכולה להחזיר ווקטור מכל אורך. אם רוצים לדוגמא, לחשב אחוזונים או `range` ניתן לעשות זאת באופן קצר יותר.  
+`range` מחזירה שני ערכים. את המינימום והמקסימום של הווקטור. 
+</div>
+
+```{r}
+range(1:10)
+```
+<div dir="rtl">
+ניתן לקבל את הערך השני של התוצאה באמצעות subsetting: 
+</div>
+
+```{r}
+range(1:10)[2]
+```
+<div dir="rtl">
+אפשרויות שונות לחישוב על הנתונים הן: 
+</div>
+```{r}
+not_cancelled %>% filter(year == 2013, month == 1, day == 1) %$% range(arr_delay)
+not_cancelled %>% filter(year == 2013, month == 1, day == 1) %>% select(arr_delay) %>% range()
+not_cancelled %>% filter(year == 2013, month == 1, day == 1) %>% pull(arr_delay) %>% range()
+
+# Use it with summarize:
+not_cancelled %>% filter(year == 2013, month == 1, day == 1) %>%
+  summarize(min_delat = range(arr_delay)[1],
+            max_del = range(arr_delay)[2])
+```
+<div dir="rtl">
+מעדכון שיצא לפני כשנה ניתן לעשות: 
+</div>
+```{r}
+not_cancelled %>% filter(year == 2013, month == 1, day == 1) %>%
+  summarize(range_del = range(arr_delay))
+
+not_cancelled %>% filter(year == 2013, month == 1, day == 1) %>%
+  summarize(range_del = range(arr_delay),
+            range_label = c("min_delay", "max_delay"))
+
+```
+
+<div dir="rtl">
+נחשב אחוזון 10 וחציון ואחוזון 90 על האיחורים לכל יום
+</div>
+```{r}
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  summarise( q10 = quantile(arr_delay[arr_delay > 0], probs = 0.1),
+             q50 = quantile(arr_delay[arr_delay > 0], probs = 0.50),
+             q50 = quantile(arr_delay[arr_delay > 0], probs = 0.50))
+
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  summarise( q10 = quantile(arr_delay[arr_delay > 0], probs = c(0.1, 0.5, 0.9)),
+             probabilities = c(0.1, 0.5, 0.9))  
+
+```
+<div dir="rtl">
+להרחבה על האפשרויות ב-`summarize` ראו: 
+[dplyr 1.0.0:new `summarize()` features](https://www.tidyverse.org/blog/2020/03/dplyr-1-0-0-summarise/)
+
+</div>
+
+__inter quantile range__
+```{r}
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  summarise( iqr_all = IQR(arr_delay),
+             iqr_delayed = IQR(arr_delay[arr_delay > 0])) %>%
+  arrange(desc(iqr_delayed)) # arange iqr from largest to smallest
+```
+
+### first last
+<div dir="rtl">
+עבור כל יום, למצוא את הטיסה הראשונה, שניה וכך הלאה...  
+יש כמה דרכים לעשות זאת.
+</div>
+```{r}
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  summarise( first =  min(dep_time),
+             first2 = first(dep_time),
+             
+             second = nth(dep_time, 2),
+             third =  nth(dep_time, 3),
+             
+             last = max(dep_time),
+             last_2 = last(dep_time),
+             last_3 = dep_time[length(dep_time)])
+```
+<div dir="rtl">
+סנן את הטיסה הראשונה והאחרונה בכל יום
+</div>
+```{r}
+not_cancelled %>% select(year:day, dep_time) %>% 
+  group_by(year, month, day) %>% 
+  mutate(r = min_rank(desc(dep_time)))  %>%
+  filter(r %in% range(r))
+```
+
+### n_distinct   
+<div dir="rtl">
+ספור כמה ערכים שונים זה מזה יש בווקטור. למשל, מספר חברות הטיסות שמגיעות ליעד מסוים.
+</div>
+```{r}
+not_cancelled %>% 
+  group_by(dest) %>% 
+  summarise(carriers = n_distinct(carrier)) %>% 
+  arrange(desc(carriers))
+```
+
+`n_distinct` is the same as using basR's `length(unique(x))`
+```{r, eval = F}
+not_cancelled %>% 
+  group_by(dest) %>% 
+  summarise(carriers = length(unique(carrier))) %>% 
+  arrange(desc(carriers))
+```
+
+### count
+<div dir="rtl">
+`count` יוצר משתנה בשם `n`
+</div>
+```{r}
+not_cancelled %>% count(dest, sort = TRUE)
+```
+
+<div dir="rtl">
+שימוש ב-`sort` זה אותו הדבר כמו: 
+</div>
+```{r, eval=FALSE}
+not_cancelled %>% count(dest) %>% arrange(desc(n))
+```
+
+<div dir="rtl">
+ספור תצפיות לפי יותר ממשתנה אחד: 
+</div>
+
+```{r, eval=T}
+not_cancelled %>% count(dest, origin) %>% arrange(desc(n)) # count pairs- flight routes
+```
+
+<div dir="rtl">
+ספר כמה טיסות יש בכל שעה ביום.  
+ב-8:00 בבוקר יש הכי הרבה טיסות
+</div>
+```{r, eval=T}
+not_cancelled %>% count(dep_hour = round(dep_time, digits =  -2)) %>% arrange(desc(n)) 
+
+# time is in hour minute format
+not_cancelled$dep_time[1:10] 
+
+# round()  
+round(1234.5678, digits = 2) # 2 digits right to the decimal point
+round(1234.5678, digits = -2) # left to the decimal point
+```
+
+__count with weights__  
+<div dir="rtl">
+יש אפשרות לעשות ספירה עם משקולות לפי משתנה אחר
+</div>
+
+```{r}
+# tribble() is a function to define tibble row by row:
+df <- tribble(
+  ~name,    ~gender,   ~runs,
+  "Max",    "male",       10,
+  "Sandra", "female",      1,
+  "Susan",  "female",      4)
+
+df
+
+# counts rows:
+df %>% count(gender)
+
+# counts runs:
+df %>% count(gender, wt = runs) # weights of runs
+
+# add count - adds a new variable to the data
+df %>% add_count(gender, wt = runs)
+```
+
+### tally
+<div dir="rtl">
+`tally` מניח שהמשתמש כבר ביצע את ה-groupning.
+</div>
+```{r}
+df %>% tally()
+
+df %>% group_by(gender) %>% tally()
+
+df %>% group_by(gender) %>% add_tally()
+
+df %>% group_by(gender) %>% add_tally(wt = runs)
+```
+
+### coertion 
+<div dir="rtl">
+שימוש ב-`sum(x)` על ווקטור לוגי, סופר את מספר ערכי ה-`TRUE`. ניצור ווקטור לוגי ונסכום אותם עם sum או mean: 
+</div>
+```{r}
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  summarise(before_500 = dep_time < 500) # creating a logical
+
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  summarise(before_500 = dep_time < 500) %>% 
+  summarize(n_early = sum(before_500)) # sum the TRUE's of the logical
+```
+
+<div dir="rtl">
+אפשר לעשות זאת פעם אחת
+</div>
+
+```{r, eval = F}
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  summarise(n_early = sum(dep_time < 500))
+```
+
+<div dir="rtl">
+אותו הדבר עבור `mean`. נחשב את שיעור הטיסות שאיחרו ביותר משעה עבור כל יום.
+</div>
+```{r, eval=F}
+not_cancelled %>% 
+  group_by(year, month, day) %>% 
+  summarise(hour_prop = mean(arr_delay > 60)) 
+```
+
+## grouping several vars  
+<div dir="rtl">
+כאשר עושים `group` על מספר משתנים, כל `summary` מקלף שכבה של `group`. זה מאפשר לקפל את הנתונים שלב אחר שלב. 
+</div>
+```{r}
+daily <- group_by(flights, year, month, day)
+
+group_vars(daily)
+
+# number of flights per day: 
+(per_day   <- summarise(daily, flights = n())) %>% .[1:2,]
+
+group_vars(per_day) # we lost the day grouping variables
+
+# number of flights per month: 
+(per_month <- summarise(per_day, flights = sum(flights))) %>% .[1:2,]
+
+group_vars(per_month) # we lost the month grouping variables
+
+
+
+(per_year  <- summarise(per_month, flights = sum(flights)))
+
+
+# ungrouping
+daily %>% 
+  ungroup() %>%             # no longer grouped by date
+  summarise(flights = n())  # all flights
+```
+
+## group_by with filter 
+
+```{r}
+flights %>% 
+  group_by(dest) %>% 
+  filter(n() > 365)
+```
+
+### exercise  
+<div dir="rtl">
+1. מצא חלופות שונות אשר יניבו את אותן תוצאות כמו הקוד הבא: 
+</div>
+`not_cancelled %>% count(dest)`  
+`not_cancelled %>% count(tailnum, wt = distance)`  
+
+<div dir = "rtl">
+2. מה הארגומנט sort  עושה בפונקציה `count`. מתי תשתמש בו?   
+3. מה ההבדל בין האופן שבו פועלת הפונקציות `+, log` בתוך grouped data לבין פונקציות כגון `mean, lead, lag`? האם תוכל לאפיין את ההבדל בין שני הסוגים?   
+4. באיזו שעה של היום כדאי לטוס אם ברצונך להימנע מאיחור בהגעה?   
+5. מצא את כל היעדים אשר מגיעים אליהם לפחות שתי חברות תעופה. דרג את היעדים לפי מספר חברות התעופה שמגיעים אליהם.   
+</div>
+
+
+
+
+
+
+
+
+
+
+
