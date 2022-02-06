@@ -1,0 +1,1626 @@
+---
+title: "Functions"
+subtitle: "lession 7"
+author: "Eviatar Guttman"
+date: "Last updated: `r format(Sys.time(), '%d-%m-%Y')`"  
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: no
+    smooth_scroll: yes
+    fig_caption: yes
+    highlight: tango
+    theme: flatly
+    css: ../style.css
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+---  
+
+```{r setup, include = F}
+# global chunk options
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = T,
+                      message = T,
+                      error = T,
+                      tidy=T,
+                      fig.align = 'center',
+                      collapse = TRUE,
+                      fig.width = 4,
+                      fig.asp = 5/7
+                      )
+
+# don't show NA's in tables
+options(knitr.kable.NA = '')
+```
+
+
+```{r, message=FALSE}
+library(tidyverse)
+library(patchwork)
+library(Hmisc)
+```
+
+```{r echo=FALSE, out.width='80%'}
+# knitr::include_graphics('3_images/deMorgan.PNG')
+```
+
+# intro
+<div dir="rtl">
+פונקציות מאפשרות אוטומציה  במקום להשתמש ב copy-paste.  
+  
+ ייתרונות:   
+  1.	שימוש בשם אינפורמטיבי להקל על הבנת התהליך המבוצע.  
+  2.	עדכון קוד במקום אחד.  
+  3.	מזעור טעויות.   
+    
+נשקול לכתוב פונקציה כאשר העתקנו קוד באמצעות copy paste  יותר מפעמיים.     
+<br> 
+</div>
+## motivation  
+<div dir="rtl">  
+__דוגמא:__    
+ברצוננו לנרמל את ערכי הוקטורים ב-data.frame כך שערכי הווקטורים יהיו בין 0 לבין 1. 
+</div>
+
+```{r}
+df <- tibble::tibble(
+  a = rnorm(10,3, 5),
+  b = rnorm(10),
+  c = rnorm(10)
+)
+```
+
+
+```{r, eval=FALSE}
+df$a <- (df$a - min(df$a, na.rm = TRUE)) / 
+  (max(df$a, na.rm = TRUE) - min(df$a, na.rm = TRUE))
+
+df$b <- (df$b - min(df$b, na.rm = TRUE)) / 
+  (max(df$b, na.rm = TRUE) - min(df$a, na.rm = TRUE))
+
+df$c <- (df$c - min(df$c, na.rm = TRUE)) / 
+  (max(df$c, na.rm = TRUE) - min(df$c, na.rm = TRUE))
+```
+
+<div dir="rtl">
+בשורה השניה יש טעות.   
+<br>
+בקוד שיוצר את המשתנה המנורמל, יש רק משתנה אחד, ווקטור אותו רוצים לנרמל.       
+נמשוך ווקטור אחד מהנתונים ונעבוד איתו כדי ליצור את הפונקציה:   
+</div>
+```{r}
+(x <- df$a)
+
+(x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+
+range(x) # returns a vector containing the minimum and maximum of arguments.
+
+```
+
+<div dir="rtl">
+כעת הקוד פשוט יותר, וניתן להכניסו לפונקציה: 
+</div>
+
+```{r}
+rescale <- function(x) {
+  
+  rng <- range(x, na.rm = TRUE)
+  (x - rng[1]) / (rng[2] - rng[1])
+
+  }
+
+```
+<div dir="rtl">
+נבדוק שהפונקציה עובדת 
+</div>
+
+```{r}
+rescale(c(0, 5, 10))
+```
+
+## function tracture
+
+<div dir="rtl">
+פונקציה מורכבת משלושה חלקים: שם, ארגומנטים וגוף.    
+המבנה הכללי הוא: 
+</div>  
+```{r, eval=FALSE}
+function_name <- function(list of arguuments){
+  
+  # body 
+  # something is happening
+
+  }
+```
+
+:::{.blue-box}
+<div dir="rtl">  
+לא לכל הפונקציות יש את שלושת הרכיבים. למשל, ישנן פונקציות פרמיטיביות כמו `sum` או- `[` שנכתבו בשפת C.    
+</div>  
+:::    
+  
+```{r}
+sum
+
+
+`[`
+```
+
+<div dir="rtl">
+__השם__ מתאר את מה שהפונקציה עושה. השם צריך להיות קצר ואינפורמטיבי. לא כדאי להשתמש בשמות שכבר תפוסים ע"י חבילות אחרות בשימוש, ובטח לא במילים שמורות.   
+לא לעשות את זה: 
+</div>
+```{r, eval = F}
+T <- FALSE
+c <- 10
+```
+<div dir="rtl">
+__ארגומנטים__ הם ה- inputs  של הפונקציה. (בדוגמא שלנו יש ארגומנט יחיד)  
+ניתן לראותם באמצעות:
+</div>
+```{r}
+formals(rescale)
+```
+<div dir="rtl">
+
+__גוף__ הפונקציה זה הקוד שעושה את העבודה ונמצא בין הסוגריים המסולסלים `{`.
+ניתן לראותו באמצעות: 
+</div>
+```{r}
+body(rescale)
+
+```
+<div dir="rtl">
+כדי להבהיר מה הקוד עושה השתמשו בהערות עם `#`  המסבירות למה... הקוד לא יכול להסביר מדוע עשיתם משהו, מדוע בחרתם בגישה זו או אחרת.     
+מנגד, מוטב לא לכתוב הערות שמסבירות מה נעשה או איך. אם הקוד לא מספיק ברור, כדאי לכתוב אותו מחדש באופן יותר ברור.   
+  
+נוח לחלק את הקוד באמצעות: 
+</div>
+```{r}
+# Load data --------------------------------------
+
+# Plot data --------------------------------------
+```
+<div dir="rtl">
+Ctrl + Shift + R ייצר שורה חדה בקוד.  
+  
+תהליך החשיבה הוא:  
+תחילה, להבין מה הפונקציה עושה וליישם באמצעות קוד פשוט. לאחר מכן לכתוב את זה כפונקציה. 
+כדאי לבדוק את הפונקציה inputs  שונים.  
+
+
+</div>
+
+```{r}
+rescale(c(-10, 0, 10))
+
+rescale(c(1, 2, 3, NA, 5))
+```
+
+<div dir="rtl">
+כעת אפשר לכתוב: 
+</div>
+```{r}
+df$a <- rescale(df$a)
+df$b <- rescale(df$b)
+df$c <- rescale(df$c)
+```
+<div dir="rtl">
+צמצמנו את האפשרות לטעויות אבל עדיין אנו מעתיקים את אותו קוד 3 פעמים. (כאשר נדון ב- iteration נראה עוד אפשרויות לצמצום שורות הקוד)    
+אם הדרישות מהקוד הן שונות אפשר לעדכן זאת במקום אחד
+</div>
+```{r}
+x <- c(1:10, Inf)
+
+rescale(x)
+
+rescale <- function(x) {
+  rng <- range(x, na.rm = TRUE, finite = TRUE)
+  (x - rng[1]) / (rng[2] - rng[1])
+}
+
+rescale(x)
+
+```
+
+## function is an object    
+
+<div dir="rtl">  
+פונקציה ב-R, היא אובייקט:   
+היא מקבלת שם עם אותו אופרטור `<-`.  
+כאשר הפונקציה קצרה ולא חשובה, לא חייבים לתת לה שם:   
+</div>  
+```{r}
+sapply(mtcars, function(x) length(unique(x)))
+
+dplyr::select(mtcars,function(x) !is.numeric(x))    
+
+```
+<div dir="rtl">  
+אפשר לאגד פונקציות ברשימה: 
+</div>  
+
+```{r}
+funs <- list(
+  half = function(x) x / 2,
+  double = function(x) x * 2
+)
+
+funs$double(10)
+funs$half(10)
+
+```
+<div dir="rtl">  
+אפשר לשמור את הארגומנטים של הפונקציה במבנה נפרד ולהזין אותם באמצעות `do.call`
+</div>  
+
+```{r}
+mean(1:10, na.rm = TRUE)
+
+args <- list(1:10, na.rm = TRUE)
+
+do.call(mean, args)
+
+
+
+```  
+  
+
+:::{.blue-box}  
+<div dir="rtl">  
+ל-`do.call` יש שני ארגומנטים: פונקציה לקרוא לה ורשימה של הארגומנטים. כלומר, ניתן להזין פונקציה כארגומנט לפונקציה אחרת.   
+`purrr::invoke(mean, args)` מיישמת את אותו הדבר. 
+  </div>
+:::    
+  
+## exercise     
+<div dir="rtl">    
+1.    כתבו פונקציה שמחשבת את השונות של ווקטור: 
+
+</div>
+$$ Var(x) = \frac{1}{n-1} \sum_{i = 1}^n(x_i -\overline{x})^2$$
+
+
+<div dir="rtl">
+2. כתבו את הפונקציה rescale  כך שהערך Inf ימופה ל 1 והערך Inf- ימופה ל  0.  
+  
+3. כתבו פונקציה בשם both_na, המקבלת שני ווקטורים באותו אורך ומציינת   את מספר המקרים בהם שני הווקטורים (באותו מקום) הם NA.     
+כלומר, בווקטורים הבאים:
+</div>
+
+```{r, eval=F}
+a <- c(1, NA, NA)
+b <– c(NA, NA, 3)
+```
+<div dir="rtl">
+מספר המקרים הוא 1. 
+גם ב-a וגם ב-b  ערך התא השני הוא NA
+</div>
+
+
+<div dir="rtl">
+</div>
+
+
+
+## function forms    
+<div dir="rtl">
+כל מה שקיים ב-R הוא אובייקט
+כל מה שקורה ב-R זו קריאה לפונקציה  
+לא כל הפונציות נראות אותו הדבר.   
+</div>
+Function calls come in four varieties:  
+  
+- __prefix__: the function name comes before its arguments, like `foofy(a, b, c)`. These constitute of the majority of function calls in R.   
+  
+- __infix__: the function name comes in between its arguments, like `x + y`. Infix forms are used for many mathematical operators, and for user-defined functions that begin and end with %.  
+  
+- __replacement__: functions that replace values by assignment, like `names(df) <- c("a", "b", "c")`. They actually look like prefix functions.  
+  
+- __special__: functions like `[[`, if, and for. While they don’t have a consistent structure, they play important roles in R’s syntax.    
+  
+<div dir="rtl">
+__אנחנו נדבר רק על prefix functions.__
+</div>
+
+# conditional excecution
+<div dir="rtl">
+פונקציות כמו `if`  ו-`switch` מאפשרות להריץ קוד שונה בהתאם ל-input.   
+__שימוש ב  - `if`__  
+</div>
+```{r, eval=FALSE}
+if (condition){
+  # code executed when condition is TRUE
+}
+
+
+
+if (condition) {
+  # code executed when condition is TRUE
+} else {
+  # code executed when condition is FALSE
+}
+
+
+# or in short: 
+if (condition) true_action
+if (condition) true_action else false_action
+```
+<div dir="rtl"> 
+אם `condition` הוא`TRUE` ה-`true_action` מיושם (evaluated). אם `condition` הוא `FALSE`, ה-`false_action` האופציונאלי מיושם.     
+  
+כאשר לא מגדירים `else`  וה-`condition` הוא `FALSE`, הפונקציה מחזירה `NULL`. יש יישומים המשתמשים בתכונה זו.   
+<br>    
+המבנה  של הכתיבה הוא:    
+- פותחים סוגריים מסולסלים ועוברים שורה.   
+- בשורה הבאה הקוד מתחיל לאחר שני רווחים.   
+- סגירה של סוגריים מסולסלים בשורה משלה, אלא אם כן מגיע else  לאחר מכן. 
+</div>
+```{r, eval = F}
+if (y < 0 && debug) {
+  message("Y is negative")
+}
+
+if (y == 0) {
+  log(x)
+} else {
+  y ^ x
+}
+```
+<div dir="rtl">
+אם הביטוי קצר מאד , אפשר לוותר על הסוגריים המסולסלים ולכתוב את הביטוי בשורה אחת. 
+</div>
+```{r}
+y <- 10
+
+if (y < 20) "Too low" else "Too high"
+
+
+```
+<div dir="rtl">
+אפשר לשרשר מספר תנאים: 
+</div>
+```{r, eval=FALSE}
+if (this) {
+  # do that
+} else if (that) {
+  # do something else
+} else {
+  # 
+}
+
+# for example: 
+grade <- function(x) {
+  if (x > 90) {
+    "A"
+  } else if (x > 80) {
+    "B"
+  } else if (x > 50) {
+    "C"
+  } else {
+    "F"
+  }
+}
+
+
+```
+<div dir="rtl">
+אם שרשרתם הרבה תנאים, כדאי לחשוב על כתיבה מחדש.  טכניקה אפשרית היא שימוש ב `switch`: 
+</div>
+```{r, eval=FALSE}
+function(x, y, op) {
+   switch(op,
+     plus = x + y,
+     minus = x - y,
+     times = x * y,
+     divide = x / y,
+     stop("Unknown op!")
+   )
+}
+
+
+```
+<div dir="rtl">
+`if` מחזיר ערך כך שניתן לשמור את התוצאה: 
+</div>
+```{r}
+x1 <- if (TRUE) 1 else 2
+x2 <- if (FALSE) 1 else 2
+
+c(x1, x2)
+```
+<div dir="rtl"> 
+התוצאה של יישום (evaluation) ה-`condition` צריכה להסתיים ב-`TRUE` או `FALSE`.
+</div>
+```{r}
+if ("x") 1
+
+if(logical()) 1
+
+if(NA) 1
+
+
+# remembering the 2nd session that non zero numerics will be coerced into TRUE: 
+x <- 0.001
+
+as.logical(x)
+
+if(x) 1 else "zero"
+
+if(!x) 1 else "zero"
+
+```
+<div dir="rtl"> 
+אם הזנתם ווקטור באורך גדול מ-1 תקבלו אזהרה: 
+</div>
+```{r}
+if (c(TRUE, FALSE)) "אמת במקום הראשון בוקטור"
+
+```
+<div dir="rtl">
+`if` עובד רק עם ערך יחיד של `TRUE` או  `FALSE` . ווקטור באורך 1. סקלר.   
+אם יש לכם וקטור ארוך יותר השתמשו בפונקציות ווקטוריות כמו `base::ifelse` או `dplyr::if_else`
+</div>
+
+```{r}
+x <- 1:10
+
+dplyr::if_else(x %% 2 == 0, "even", "odd")
+
+```
+<div dir="rtl"> 
+אפשרות יותר כללית היא להשתמש ב-`dplyr::case_when`
+</div>
+```{r}
+dplyr::case_when(
+  x %% 6 == 0 ~ "by 6",
+  x %% 4 == 0 ~ "by 4",
+  x %% 2 == 0 ~ "by 2",
+  is.na(x) ~ "???",
+  TRUE ~ as.character(x)
+)
+```
+<div dir="rtl"> 
+הנה פונקציה המחזירה וקטור לוגי המציין האם כל תא בווקטור הוא עם שם או לא
+</div>
+```{r}
+has_name <- function(x) {
+  nms <- names(x)
+  if (is.null(nms)) {
+    rep(FALSE, length(x))
+  } else {
+    !is.na(nms) & nms != ""
+  }
+}
+
+(x <-c(a = 1, b = 2, c = 3, 5:7))
+
+has_name(x)
+
+```
+
+<div dir="rtl"> 
+
+הפונקציות `&`   ו- `|`  הן ווקטוריות.    
+פונקציה ווקטורית מקיימת שני תנאים:   
+1.	הוקטור שהיא מחזירה הוא באותו אורך של הוקטור שנכנס.   
+2.	התוצאה המחושבת בתא בודד (cell)  תהיה זהה  למצב בו הפעלתם את הפונקציה רק על אותו התא.   
+  
+ל- `&`   ו- `|`  יש מקבילות  סקלארות: `&&`, `||`.    
+  
+גם `==` היא ווקטורית. תחליפים סקלארים הם  `all` ו-`any` המסכמים את הוקטור לתנאי לוגי יחיד - סקלר.
+
+</div>
+
+```{r}
+# & Vs && (similar to | vs ||)
+
+10 > 9                      # single TRUE
+
+1:5 > 3                     # a logical vector
+
+
+# & is vectorized: 
+10 > 9 & 1:5 > 3
+
+9 > 10 & 1:5 > 3
+
+
+# && is not vectorized, it will take the first value: 
+10 > 9 && 1:5 > 3
+
+9 > 10 && 1:5 > 3
+
+10 > 9 && 4:5 > 3         # 10 > 9 and also 4 > 3
+
+
+# '==' vs any or all:
+# '==' is vectorized
+3 == 1:5
+
+
+# 'any()' and 'all()' flattens the vector: 
+any(1:5 == 3)
+
+all(1:5 == 3)
+
+all(1:5 > 0.9)
+
+```
+<div dir="rtl"> 
+תכונה נוספת של && (וגם של ||) היא : short-circuiting.   
+בביטוי: 
+</div>
+`cond1` `&&` `cond2` `&&` `cond3` `&&` `...`
+<div dir="rtl"> 
+ה-&& יבצע evaluation ל- `cond2` רק אם `cond1` התברר כ-`TRUE`. באופן דומה, evaluation ל-`cond3` יבוצע רק עם ה-evaluation ל-`cond2` התברר כ-`TRUE`.  
+זה מאפשר לבצע מספר בדיקות אחת אחרי השנייה, ולהפסיק ברגע שאחת מהן מתבררת כ-FALSE.   
+למשל, הנה פונקציה שבודקת האם וקטור הוא וקטור של הסתברויות: 
+</div>
+
+```{r}
+check_prob = function(probs){
+    is.numeric(probs) &
+    length(probs) > 1 &
+    sum(probs) == 1
+}
+
+check_prob(c(0.2, 0.4, 0.4))
+
+check_prob(letters)
+
+# The error comes from: 
+sum(letters)
+
+is.numeric(letters)
+```
+<div dir="rtl"> 
+אם נזין את `letters` תוך שימוש ב-short circuit, ה-evaluation ייפסק כבר בשורה הראשונה. 
+</div>
+
+
+```{r}
+check_prob = function(probs){
+  is.numeric(probs) &&
+    length(probs) > 1 &&
+    sum(probs) == 1
+}
+
+check_prob(letters)
+```
+
+<div dir="rtl"> 
+אם עליכם להשתמש בשילוב של תנאים לוגיים, בביטוי `If`, אז good practice זה להשתמש במקבילות הסלקריות:   `&&` ו- `||`. 
+</div>
+```{r, eval=FALSE}
+if(condition1 && condition2) { expression }
+
+if(condition1 || condition2) { expression }
+
+```
+
+## exercise  
+<div dir="rtl">
+כתבו פונקציה שמברכת ב"בוקר טוב",  "אחה"צ טובים", או "ערב טוב" בהתאם לשעות היום.   
+לצורך בדיקת השעה השתמשו בארגומנט הזמן בפונקציה:  `lubridate::now`.
+</div>
+
+# Return values
+<div dir="rtl">
+פונקציה מחזירה את הערך האחרון שמחושב.   
+אפשר להחזיר ערך מוקדם עם `return`. 
+</div>
+
+```{r}
+f1 <- function(){
+  x <- 1
+  x + 2
+  x + 3
+  }
+
+f1()
+
+f1 <- function(){
+  x <- 1
+  return(x + 2)
+  x + 3
+}
+
+f1()
+```
+<div dir="rtl">
+ דוגמא מעשית
+</div>
+```{r, eval=FALSE}
+complicated_function <- function(x, y, z) {
+  if (length(x) == 0 || length(y) == 0) {
+    return(0)
+  }
+    
+  # Complicated code here
+}
+
+```
+<div dir="rtl">
+אפשר להפוך את הביטויים של if כדי להתחיל מהחלק הפשוט. 
+</div>
+```{r}
+# one option
+f <- function() {
+  if (x) {
+    # Do 
+    # something
+    # that
+    # takes
+    # many
+    # lines
+    # to
+    # express
+  } else {
+    # return something short
+  }
+}
+
+# replace positions: 
+
+f <- function() {
+  if (!x) {
+    return(something_short)
+  }
+
+  # Do 
+  # something
+  # that
+  # takes
+  # many
+  # lines
+  # to
+  # express
+}
+```
+<div dir="rtl">
+כך, קל יותר להבין את הקוד.   
+</div>
+
+# function arguments
+
+<div dir="rtl"> 
+ארגומנטים נחלקים לשני סוגים עיקריים: ה -data, וה- details של איך לבצע את החישובים.     
+למשל, ב -`log`, ה-data זה הוקטור x, וה-details זה הבסיס של הלוגריתם.       
+בד"כ הארגומנט של ה-data מגיע ראשון.   הארגומנטים של ה-details מגיעים אח"כ ובד"כ יש להם ערך ברירת מחדל.      
+למשל, הפונקציה הבאה מחשבת רווח בר סמך סביב הממוצע של משתנה מקרי:     
+</div>
+```{r}
+# Compute confidence interval around mean using normal approximation
+mean_ci <- function(x, conf = 0.95) {
+  se <- sd(x) / sqrt(length(x))
+  alpha <- 1 - conf
+  mean(x) + se * qnorm(c(alpha / 2, 1 - alpha / 2))
+}
+
+x <- runif(100)
+
+mean_ci(x)
+
+mean_ci(x, conf = 0.99)
+```
+
+<div dir="rtl">
+בד"כ, נבחר את ערך ברירת המחדל לערך הנפוץ ביותר.   
+אחרת, בוחרים את הערך כך המשתמש יהיה מודע למה שקורה בפונקציה. למשל, בד"כ בוחרים את `na.rm`  להיות `FALSE`, כדי שהמשתמש יהיה מודע לקיום ערכים חסרים.   
+בקריאה לפונקציה ניתן להשמיט את שם הארגומנט. אבל, כאשר משנים את ערך ברירת המחדל, כדאי לקרוא לארגומנט בשם.  
+</div>
+
+
+```{r, eval=FALSE}
+# Good
+mean(1:10, na.rm = TRUE)
+
+# Bad
+mean(x = 1:10, , FALSE)
+mean(, TRUE, x = c(1:10, NA))
+```
+
+<div dir="rtl">
+כדאי לכתוב עם רווחים כמו באנגלית: 
+</div>
+```{r, eval=FALSE}
+# Good
+average <- mean(feet / 12 + inches, na.rm = TRUE)
+
+# Bad
+average<-mean(feet/12+inches,na.rm=TRUE)
+```
+
+
+## common object names  
+<div dir="rtl">
+- וקטורים ב-    x, y, z  
+- וקטורים של משקולות ב-  w  
+- טבלת נתונים ב- df  
+- אינדקסים נומריים ב – i , j   
+- אורך של וקטור או מספר שורות ב- n  
+</div>
+## checking  argument values  
+<div dir="rtl">
+הפונקציה הבאה מחשבת ממוצע משוקלל:   
+</div>
+```{r}
+wt_mean <- function(x, w) {
+  sum(x * w) / sum(w)
+}
+```
+
+<div dir="rtl">
+אם נזין שני ווקטורים שאורך אחד הוא מכפלה של השני נקבל תוצעה: 
+</div>
+
+```{r}
+wt_mean(1:6, 1:3)
+```
+<div dir="rtl">
+זה לא מצב רצוי. אפשר להשתמש בכלים המחזירים error או message או warning כדי ליידע את המשתמש: 
+</div>
+__Error__  
+```{r, error=T}
+wt_mean <- function(x, w) {
+  
+  if (length(x) != length(w)) {
+    stop("`x` and `w` must be the same length", call. = FALSE)
+  }
+  
+  sum(w * x) / sum(w)
+}
+
+wt_mean(1:6, 1:3)
+```
+
+__warning__  
+```{r, error=T}
+wt_mean <- function(x, w) {
+  
+  if (length(x) != length(w)) {
+    warning("`x` and `w` shuld be the same length", call. = TRUE)
+  }
+  
+  sum(w * x) / sum(w)
+}
+
+wt_mean(1:6, 1:3)
+```
+
+__message__  
+```{r, error=T}
+wt_mean <- function(x, w) {
+  
+  if (length(x) != length(w)) {
+    message("`x` and `w` are not the same length, the shorter vector was recycled")
+  }
+  
+  sum(w * x) / sum(w)
+}
+
+
+wt_mean(1:6, 1:3)
+```
+
+<div dir="rtl">
+דרך נוספת לקבל error  היא להשתמש ב- `stopifnot` המוודאת שתנאי אכן מתקיים: 
+</div>
+```{r, error=T}
+wt_mean <- function(x, w, na.rm = FALSE) {
+  
+  stopifnot(is.logical(na.rm), length(na.rm) == 1)
+  stopifnot(length(x) == length(w))
+  
+  if (na.rm) {
+    
+    miss <- is.na(x) | is.na(w)
+    x <- x[!miss]
+    w <- w[!miss]
+  }
+  
+  sum(w * x) / sum(w)
+}
+
+
+wt_mean(1:6, 6:1, na.rm = "foo")
+
+wt_mean(1:6, 3:1, na.rm = T)
+
+wt_mean(1:6, 6:1, na.rm = T)
+
+```
+
+<div dir="rtl">
+בשורה הראשונה בפונקציה אנו מוודאים שהארגומנט של na.rm הוא לוגי ואורכו 1. 
+בשורה השניה מוודאים שאורך שני הווקטורים זהה.   
+ה- `if` בודק האם קיים ערך חסר באחד מהווקטורים. אם כן, בשני הווקטורים המיקום של הערך החסר מוסר.  
+
+</div>
+
+
+
+
+# dot dot dot ...
+<div dir="rtl">
+פונקציות רבות מקבלות מספר שרירותי כלשהו של ארגומנטים ב- inputs.
+</div>
+```{r, eval=FALSE}
+sum(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+
+stringr::str_c("a", "b", "c", "d", "e", "f")
+```
+
+<div dir="rtl">
+הביטוי '...' תופש מספר כלשהו של ארגומנטים שבמצב אחר לא מסתדרים יחד. זה שימושי כי אפשר לשלוח זאת לפונקציה פנימית שהפונקציה שלכם כתובה מסביבה. 
+</div>
+```{r}
+# example 1
+commas <- function(...){
+  
+ stringr::str_c(..., collapse = ", ")
+}
+
+commas(letters[1:10])
+
+
+# example 2
+inner_function <- function(y, z) {
+  
+  list(y = y, z = z)
+}
+
+
+outer_function <- function(x, ...) {
+  
+  inner_function(...)
+}
+
+str(outer_function(x = 1, y = 2, z = 3))
+
+
+# example 3
+# lapply() uses ... to pass na.rm on to mean():
+x <- list(c(1, 3, NA), c(4, NA, 6))
+
+str(lapply(x, mean, na.rm = TRUE))
+```
+<div dir="rtl">
+צריך להיזהר בשימוש בטכניקה זו, ארגומנטים שנכתבו תוך שגיאת כתיב לא יביאו ל-error: 
+</div>
+```{r}
+x <- c(1, 2)
+
+sum(x, na.mr = TRUE)
+
+sum(1, 2, NA, na_rm = TRUE)
+```
+
+<div dir="rtl">
+אם אתם רוצים רק לתפוש את הערכים של ... בכתיבת הפונקציה השתמשו ב- list(…)  
+</div>
+```{r}
+i04 <- function(...) {
+  list(...)
+}
+
+str(i04(a = 1, b = 2))
+```
+
+## excersize  
+<div dir="rtl">  
+1. מה התוצאה של הביטוי   `commas(letters, collapse = "-")`.   מדוע זה קורה ואיך פותרים זאת?   
+2. מה הארגומנט trim  עושה בפונקציה mean(), ומתי הוא שימושי?  
+
+3. ערך ברירת המחדל בפונקציה `cor()` בארגומנט ה- `method`  הוא:  c("pearson", "kendall", "spearman").  מה המשמעות ואיזה ערך משמש כברירת מחדל?
+ 
+</div>
+
+# Pipable functions
+<div dir="rtl">
+כדאי לדעת מהו סוג האובייקט שהפונקציה מחזירה. 
+לדוגמא, הפונקציות המרכזיות ב-`dplyr` (mutate, summarize, arrange, select, filter ) 
+מחזירות ב-output  data.frame. 
+שני סוגים של pipeable : 
+</div>
+__transformations__, an object is passed to the function’s first argument and a modified object is returned.    
+  
+__side-effects__, the passed object is not transformed. Instead, the function performs an action on the object, like drawing a plot or saving a file. Side-effects functions should “invisibly” return the first argument, so that while they’re not printed they can still be used in a pipeline.
+```{r}
+show_missings <- function(df) {
+  n <- sum(is.na(df))
+  cat("Missing values: ", n, "\n", sep = "")
+
+  invisible(df)
+}
+```
+The `invisible()` means that the input df doesn’t get printed out.  
+And we can still use it in a pipe:
+```{r}
+show_missings(mtcars)
+
+class(x)
+
+dim(x)
+
+mtcars %>% 
+  show_missings() %>% 
+  mutate(mpg = ifelse(mpg < 20, NA, mpg)) %>% 
+  show_missings() 
+
+
+
+```
+
+
+# lexical scoping
+<div dir="rtl">
+נושא זה עוסק במציאת הערך הקשור לשם (באמצעות `<-` ).
+</div>
+## Name masking  
+<div dir="rtl">  
+שמות שמוגדרים בתוך הפונקציה ממסכים שמות שהוגדרו מחוץ לפונקציה
+</div>
+```{r}
+x <- 10
+y <- 20
+
+g02 <- function() {
+
+  x <- 1
+  y <- 2
+  c(x, y)
+}
+
+g02()
+
+```
+<div dir="rtl">
+אם השם לא הוגדר בתוך הפונקציה, R מחפשת אותו 'קומה' אחת למעלה:  
+המינוח הנכון הוא in the parent environment.
+</div>
+
+```{r}
+x <- 2
+
+g03 <- function() {
+  
+  y <- 1
+  c(x, y)
+}
+
+g03()
+
+# And this doesn't change the previous value of y
+y
+
+```
+<div dir="rtl">
+אותם כללים תקפים גם אם הפונקציה הוגדרה בתוך פונקציה אחרת. 
+</div>
+## Functions vs. variables.  
+<div dir="rtl">
+אותו כלל גם תקף לפונקציות: 
+</div>
+
+```{r}
+g07 <- function(x) x + 1
+
+g08 <- function() {
+  
+  g07 <- function(x) x + 100
+  g07(10)
+}
+
+g08()
+
+
+```
+
+<div dir="rtl">
+כאשר נותנים את אותו השם לפונקציה ולאובייקטים שאינם פונקציות, R מתעלמת מהאובייקטים שאינם פונקציות. כדאי להימנע ממצבים אלה: 
+</div>
+```{r}
+g09 <- function(x) x + 100
+
+g10 <- function() {
+  
+  g09 <- 10
+  g09(g09)
+}
+
+g10()
+```
+
+## A fresh start
+
+<div dir="rtl">
+כל פעם שקוראים לפונקציה, החישוב נעשה מחדש באופן עצמאי. 
+</div>
+
+```{r}
+g11 <- function() {
+  
+  if (!exists("a")) {
+    a <- 1
+  } else {
+    a <- a + 1
+  }
+  
+  a
+}
+
+g11()
+
+g11()
+```
+
+## Dynamic lookup
+<div dir="rtl">
+R מחפשת ערכים כאשר הפונקציה "רצה", לא כאשר היא נוצרת. התוצאה של פונקציה עשויה להשתנות בהתאם למצב האובייקטים מחוץ לפונקציה
+</div>
+
+```{r}
+g12 <- function() x + 1
+
+x <- 15
+g12()
+
+x <- 20
+
+g12()
+
+```
+
+<div dir="rtl">
+זו עשויה להיות בעיה כאשר מגדירים פונקציה משתמשת באובייקטים הנמצאים ב –global environment. (יש פתרונות לזה, ראו פרק 6 בספר advanced R)
+</div>
+
+
+# Lazy evaluation
+<div dir="rtl">
+הערכים ב-R, לא מחושבים עד לעת בהם הם נזקקים. כלומר, לא משתמשים בהם אלא אם כן קוראים להם. זו תכונה חשובה של R.    
+הארגומנטים בפונקציה מוערכים (evaluated) רק כאשר הם נקראים לכך. למשל, בקוד הבא אין error משום שלא קוראים ל-y אף פעם:   
+</div>
+
+```{r}
+g13 <- function(x, y){
+  
+  x * 10
+}
+
+g13(4)
+
+
+```
+<div dir="rtl">
+אפשר גם:  
+</div>
+```{r}
+g13(x = 4, y = non_existing_variable)
+```
+
+<div dir="rtl">
+R לא מנסה לחפש את הערך non_existing_variable.   
+  
+בביטוי `if else` רק ה חלק של ה- `TRUE` מוערך (evaluated).   
+</div>
+```{r}
+if (TRUE){
+  12
+} else {
+  no_variable
+}
+
+# Or in the oposite direction: 
+if (FALSE){
+  no_variable
+} else {
+  12
+}
+
+
+
+```
+
+<div dir="rtl">
+זה מאפשר לכלול חישובים "כבדים" בפונקציות אשר יחושבו רק אם יהיה בהם צורך, וכך הקוד יעיל. החיסרון הוא שלא תמיד יודעים לצפות מה התוכנה תעשה ב-100%.   
+  
+דוגמא: 
+
+</div>
+
+```{r}
+mean_of_that <- function(x, mean_of = mean(x)){
+  
+  x <- x[!is.na(x)]
+  print(x)
+  cat("The mean of x is", mean_of)
+}
+
+mean_of_that(c(1,2,3,4,NA))
+
+
+```
+
+
+<div dir="rtl">
+הפעם הראשונה שהפונקציה מחשבת את הערך של mean_of הוא בשורה האחרונה, זה קורה לאחר הסרת הערך החסר.   
+  
+דוגמא נוספת: 
+</div>
+```{r}
+g14 <- function(a = Sys.time(), b = Sys.time(), c = Sys.time()){
+  print(a)
+  Sys.sleep(1)
+  print(b)
+  Sys.sleep(1)
+  print(c)
+}
+g14()
+
+
+```
+
+<div dir="rtl">
+לכל תוצאה זמן אחר. כלומר, כל ביטוי הוערך בזמן אחר. 
+</div>
+## default arguments
+<div dir="rtl">
+ניתן להגדיר ערכי ברירת מחדל במונחים של ארגומנטים אחרים, או אפילו במונחים של משתנים שמוגדרים בשלב מאוחר יותר בפונקציה: 
+</div>
+```{r}
+h04 <- function(x = 1, y = x * 2, z = a + b) {
+  
+  a <- 10
+  b <- 100
+  
+  c(x, y, z)
+}
+
+h04()
+
+
+```
+<div dir="rtl">
+זה אותו עיקרון שהראנו בפונקציה mean_of_that.   
+<br>  
+על המשתמש לדעת את הסדר המדויק בו ארגומנטים של ברירת מחדל עוברים evaluation.  
+ה- evaluation environment עבור ארגומנטים של ברירת מחדל שונה מזו של ארגומנטים שסופקו ע"י המשתמש.  
+ה- evaluation environment של ארגומנט ברירת מחדל היא בתוך הפונקציה. 
+</div>
+
+ 
+```{r}
+h05 <- function(x = ls()) {
+  
+  a <- 1
+  x
+}
+
+# ls() evaluated inside h05:
+h05()
+
+# ls() evaluated in global environment:
+h05(ls())
+
+
+```
+
+
+
+## promises  
+<div dir="rtl">
+מה שמאפשר את הדפוס הזה הוא מבנה נתונים הנקרא __promise__.  
+  
+ה- __promise__  הוא מעין "מתכון" האומר ל-R היכן (באיזו environment) ואיך לבצע evaluation של הביטוי (expression) הכלול בתוכו. 
+
+</div>
+
+:::{.blue-box}
+Promise objects are part of R’s lazy evaluation mechanism. They contain three slots: a __value__, an __expression__, and an __environment__. When a function is called the arguments are matched and then each of the formal arguments is bound to a promise. The expression that was given for that formal argument and a pointer to the environment the function was called from are stored in the promise.
+  
+Until that argument is accessed there is no value associated with the promise. When the argument is accessed, the stored expression is evaluated in the stored environment, and the result is returned. The result is also saved by the promise. The substitute function will extract the content of the expression slot. This allows the programmer to access either the value or the expression associated with the promise.
+
+[R Language Definition](https://cran.r-project.org/doc/manuals/r-release/R-lang.html#Promise-objects)
+:::
+# environment
+<div dir="rtl">
+environment זו רשימה לא סדורה של  אוסף אובייקטים – פונקציות משתנים וכו'.  
+    
+בשפה פשוטה: environments מאפשרות לנו להשתמש באותו שם בכדי להתייחס לאובייקטים שונים בהתאם ל"איפה" אנו משתמשים בשם הזה. בתוך environment מסוימת, כל שם צריך להיות ייחודי.   
+    
+למשל: כאשר אנו קוראים ל:  `library(tidyverse)` , R מעדכנת אותנו שישנם conflicts בשמות של פונקציות משום שישן פונקציות ב-environments שונים, אבל עם שמות זהים. 
+  
+ה- environment של פונקציה קובעת כיצד R מוצאת את הערכים הקשורים לשמות האובייקטים. בעוד שאת הארגומנטים (formals) וגוף הפונקציה (body) המשתמש מגדיר, ה-environment נקבע באופן משתמע בהתבסס על 'איפה' הפונקציה הוגדרה.   
+  
+כאשר אנו מאתחלים את R, נוצרת environment הנקראת R_GlobalEnv.  אפשר להתייחס אליה בפונקציות באמצעות  `.GlobalEnv`.  כל משתנה שאנו המשתמשים מגדירים נמצא בתוך אותה environment. 
+</div>
+```{r}
+rm(list = ls())
+
+a <- 2
+
+b <- 5
+
+f <- function(x) x <- 0
+
+ls()
+
+environment()
+
+.GlobalEnv
+
+```
+
+<div dir="rtl">
+x לא נמצא ב- GlobalEnv.   
+  
+כאשר אנו מגדירים פונקציה, environment חדשה נוצרת. ל- environment של הפונקציה  f יש הפניה אל ה-parent environment. בדוגמא זו מדובר ב- GlobalEnv.
+  
+נמחיש זאת בדוגמא. נגדיר פונקציה בתוך פונקציה ונבדוק אילו אובייקטים יש בתוך כל environment: 
+</div>
+
+```{r}
+f <- function(f_x){
+  
+  g <- function(g_x){
+    print("Inside g")
+    print(environment())
+    print(ls())
+  }
+  
+    g()
+    print("Inside f")
+    print(environment())
+    print(ls())
+}
+
+
+f()
+
+
+```
+
+<div dir="rtl">
+הפונקציה g רואה רק את הארגומנט g_x. הפונקציה f רואה שני אובייקטים, את הארגומנט f_x וגם את הפונקציה g. 
+</div>
+
+## super assignment, <<-
+Regular assignment, <-, always creates a variable in the current environment. Super assignment, <<-, never creates a variable in the current environment, but instead modifies an existing variable found in a parent environment.
+
+```{r}
+x <- 0
+
+f <- function() {
+  x <<- 1
+}
+
+f()
+x
+
+
+```
+
+
+
+
+<div dir="rtl">
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# programming with dplyr
+<div dir="rtl">
+החלק הזה הועתק מתוך:
+[Programming with dplyr](https://dplyr.tidyverse.org/articles/programming.html)
+</div>
+`arrange()`, `count()`, `filter()`, `group_by()`, `mutate()`, and `summarise()` use __data masking__ so that you can use data variables as if they were variables in the environment (i.e. you write `my_variable` not `df$myvariable`).  
+  
+`rename()`, `select()`, and `pull()` use __tidy selection__ so you can easily choose variables based on their position, name, or type (e.g. `starts_with("x")` or `is.numeric`).  
+
+This makes interactive data exploration fast and fluid, but it adds challenges when you attempt to variables indirectly such as in a for loop or a function.
+  
+## data masking    
+in baseR you write: 
+```{r, eval = FALSE}
+starwars[starwars$homeworld == "Naboo" & starwars$species == "Human", ,]
+```
+with dplyr you write: 
+```{r, eval=FALSE}
+starwars %>% filter(homeworld == "Naboo", species == "Human")
+```
+
+data masking blurs the line between the two different meanings of the word “variable”:  
+
+•	env-variables  created with <-.  
+•	data-variables  that live in a data frame.   
+  
+When you have the data-variable in a function argument. __i.e. an env-variable that holds a promise__, you need to __embrace__ the argument by surrounding it in doubled braces, like `filter(df, {{ var }}`).
+
+
+```{r}
+var_summary <- function(data, var) {
+  data %>%
+    summarise(n = n(), min = min({{ var }}), max = max({{ var }}))
+}
+
+mtcars %>% group_by(cyl) %>% var_summary(mpg)
+
+```
+
+<div dir="rtl">
+דוגמא נוספת
+</div>
+```{r}
+my_summarise3 <- function(data, mean_var, sd_var) {
+  data %>% 
+    summarise(mean = mean({{ mean_var }}), sd = sd({{ sd_var }}))
+}
+
+```
+
+<div dir="rtl">
+שימוש בשמות המשתנים בתוצאה שתצא מהפונקציה: 
+</div>
+If you want to use the names of variables in the output, you can use glue syntax in conjunction with `:=`
+```{r}
+my_summarise4 <- function(data, expr) {
+  data %>% summarise(
+    "mean_{{expr}}" := mean({{ expr }}),
+    "sum_{{expr}}" := sum({{ expr }}),
+    "n_{{expr}}" := n()
+  )
+}
+
+my_summarise5 <- function(data, mean_var, sd_var) {
+  data %>% 
+    summarise(
+      "mean_{{mean_var}}" := mean({{ mean_var }}), 
+      "sd_{{sd_var}}" := sd({{ sd_var }})
+    )
+}
+
+
+my_summarise4(mtcars, cyl)
+
+my_summarise5(mtcars,mpg, cyl )
+
+```
+
+If you want to take an arbitrary number of user supplied expressions, use `...`. This is most often useful when you want to give the user full control over a single part of the pipeline, like a `group_by()` or a `mutate()`.
+
+```{r}
+my_summarise <- function(.data, ...) {
+  .data %>%
+    group_by(...) %>%
+    summarise(mass = mean(mass, na.rm = TRUE), height = mean(height, na.rm = TRUE))
+}
+
+starwars %>% my_summarise(sex, gender)
+
+```
+
+When you use `...` in this way, make sure that any other arguments start with `.` to reduce the chances of argument clashes;   
+see [https://design.tidyverse.org/dots-prefix.html](https://design.tidyverse.org/dots-prefix.html) for more details.
+
+## Tidy selection  
+With dplyr you write: `select(df, 1)` to selects the first column; and `select(df, starts_with("a"))`.  
+This is powered by a package called `tidyselect` that work behind the scene when you use `dplyr`.  
+  
+When you have the data-variable in an env-variable that is a function argument, you use the same technique as data masking: you __embrace__ the argument by surrounding it in doubled braces.
+
+
+```{r}
+summarise_mean <- function(data, vars) {
+  data %>% summarise(n = n(), across({{ vars }}, mean))
+}
+
+mtcars %>%  group_by(cyl) %>% summarise_mean(where(is.numeric))
+
+```
+
+# programming with ggplot     
+
+## function to warp intire plot     
+<div dir="rtl">
+נתחיל עם תרשים בסיסי
+</div>  
+```{r}
+ggplot(mpg, aes(x = fct_infreq(class))) + geom_bar() +
+  coord_flip() +
+  labs(x = "x label", y = "y label")
+```
+
+<div dir="rtl">
+נעטוף אותו בפונקציה
+</div>  
+```{r, eval=FALSE}
+f_bar <- function(data, mapping){
+  ggplot(data, mapping) + geom_bar() + coord_flip()
+}
+
+f_bar(mpg, aes(x = fct_infreq(class)))
+```
+
+<div dir="rtl">
+כעת נשתמש ב- __embrace__ כדי לכתוב את הקוד יותר פשוט:
+</div>  
+```{r, eval = F}
+f_bar2 <- function(data, var, title = NULL){
+  ggplot(data, aes(x = fct_infreq({{var}}))) + geom_bar() + coord_flip() +
+    labs(title = title)
+}
+
+f_bar2(mpg, class, title = "cars class distribution")
+```
+<div dir="rtl">
+כעת, נסביר מדוע השתמשנו ב-`NULL` עבור הכותרת.
+</div>  
+
+## using default values  
+
+```{r}
+plot_mpg <- function(colour_var, facet_var) {
+  ggplot(mpg) +
+    geom_point(aes(displ, hwy, colour = {{colour_var}})) +
+    facet_wrap(vars({{facet_var}}))
+}
+
+plot_mpg(class, drv)
+```
+<div dir="rtl">
+מה יקרה אם לא נספק את הארגומנט של color? 
+</div>  
+
+```{r, error=TRUE}
+plot_mpg(class)
+```
+
+<div dir="rtl">
+צריך להשלים את זה עם NULL
+</div>  
+```{r, fig.width=5}
+p1 <- plot_mpg(class, NULL) 
+p2 <-plot_mpg(NULL, NULL)
+p1 + p2
+plot_mpg(NULL, drv)
+```
+
+<div dir="rtl">
+נפתור את זה באמצעות הגדרת ברירת מחדל לארגומנטים
+</div>  
+```{r, fig.width=5}
+plot_mpg <- function(colour_var= NULL, facet_var = NULL) {
+  ggplot(mpg) +
+    geom_point(aes(displ, hwy, colour = {{colour_var}})) +
+    facet_wrap(vars({{facet_var}}))
+}
+
+p1 <- plot_mpg()
+p2 <- plot_mpg(class)
+p1 + p2
+plot_mpg( facet_var = drv)
+```
+  
+## edit component values      
+<div dir="rtl">
+כל רכיב בתרשים `ggplot` הוא אובייקט. אפשר להקצות אובייקט ולתת לו שם של משתנה. 
+</div>  
+```{r,fig.width= 5}
+bestfit <- geom_smooth( method = "lm",  se = FALSE, colour = alpha("steelblue", 0.5), size = 2)
+
+p1 <- ggplot(mpg, aes(cty, hwy)) + 
+  geom_point() + 
+  bestfit
+
+p2 <- ggplot(mpg, aes(displ, hwy)) + 
+  geom_point() + 
+  bestfit
+
+p1 + p2
+```
+<div dir="rtl">
+זו דרך מצוינת לצמצם כפילויות של קוד.   
+אפשר להרחיב את הפונקציה `bestfit` כך שתהיה יותר כללית.  
+הפונקציה הבאה מאפשרת בחירה של נוסחאת מודל הרגרסיה, צבע הקו וגודלו.
+</div>  
+```{r}
+geom_lm <- function(formula = y ~ x, colour = alpha("steelblue", 0.5), size = 2, ...) {
+  
+  geom_smooth(formula = formula, method = "lm", colour = colour,
+              size = size, ...)
+  
+}
+```
+
+
+<div dir="rtl">
+אפשר להשתמש במאפייני ברירת המחדל
+</div>  
+
+```{r}
+ggplot(mpg, aes(displ, 1 / hwy)) + 
+  geom_point() + 
+  geom_lm()
+```
+
+<div dir="rtl">
+אפשר לשנות את הנוסחאה והצבע
+</div>  
+```{r}
+ggplot(mpg, aes(displ, 1 / hwy)) + 
+  geom_point() + 
+  geom_lm(y ~ poly(x, 2), size = 1, colour = "red")
+```
+
+<div dir="rtl">
+לא הגדרנו האם להציג או לא להציג את סטיית התקן, אבל כן הגדרנו את ה-`…`. 
+אפשר להעביר ארגומנט ל- `geom_smooth`. נבטל את הצגת סטיית התקן:
+</div>  
+```{r}
+ggplot(mpg, aes(displ, 1 / hwy)) + 
+  geom_point() + 
+  geom_lm(y ~ poly(x, 2), se = FALSE)
+```
+
+## Multiple components     
+<div dir="rtl">
+אפשר להוסיף מספר רכיבים תוך שימוש ב-`list`. 
+</div>  
+
+```{r, message=F}
+geom_mean <- function() {
+  list(
+    stat_summary(fun = "mean", geom = "bar", fill = "grey70"),
+    stat_summary(fun.data = "mean_cl_normal", geom = "errorbar", width = 0.4)
+  )
+}
+
+ggplot(mpg, aes(class, cty)) + geom_mean()
+```
+<div dir="rtl">
+אם הרשימה כוללת רכיבים שהם `NULL` הם לא יוצגו. זה מאפשר להוסיף רכיבים ברשימה באמצעות תנאי `if`:
+</div>  
+
+```{r}
+geom_mean <- function(se = TRUE) {
+  list(
+    stat_summary(fun = "mean", geom = "bar", fill = "grey70"),
+    if (se) 
+      stat_summary(fun.data = "mean_cl_normal", geom = "errorbar", width = 0.4)
+  )
+}
+
+
+p1 <- ggplot(mpg, aes(drv, cty)) + geom_mean()
+
+p2 <- ggplot(mpg, aes(drv, cty)) + geom_mean(se = FALSE)
+
+p1 + p2
+
+```
+
