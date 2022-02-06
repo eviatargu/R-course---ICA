@@ -1,0 +1,243 @@
+---
+title: "html template"
+subtitle: "for IA_plots package"
+author: "Eviatar"
+date: "Last updated: `r format(Sys.time(), '%d-%m-%Y')`"  
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 2
+    toc_float: yes
+    toc_collapsed: yes
+    number_sections: yes
+    smooth_scroll: yes
+    code_folding: hide
+    fig_caption: yes
+    highlight: espresso
+    theme: flatly
+    css: "style.css"
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+---  
+
+
+```{r setup, include = TRUE}
+# note the chunk options: 
+# 1. its name is "setup". setup has to be the first chunk in the document, were global settings are happening. 
+# 2. "include = FALSE" means this chunk won't be seen in the html document. 
+
+
+# default chuck options for the entire document. 
+#one can overwrite these locally in the chunk options
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      tidy=TRUE,
+                      fig.path='Figures_RMD/',
+                      fig.align = 'center')
+
+# do not display NA's in printed tables, instead use blank space
+options(knitr.kable.NA = '')
+
+```
+
+
+
+# Intro {-}
+:::{.pink-box}
+<div dir="rtl">
+כיוון ש RStudio לא תומכת בכתיבה מימין לשמאל, כדאי לכתוב את הדברים שרוצים בעברית בקובץ וורד נפרד ואז לעתיק לתוך קובץ ה Rmd
+</div>
+:::
+
+:::{.blue-box}
+there is also a blue box
+:::
+
+
+# Setup
+- __load packages and more...__    
+<br>
+next code chunk does several things:
+
+  1. load wanted packages and installs the missing  
+  2. setting defaults in R:  turning off scientific notation and limit the amount of decimal digits after the "."  
+  3. sets up the IA_theme for ggplot  
+  4. defines functions to nicely present tables in the document. 
+```{r loading packages etc.}
+# load packages: 
+pacman::p_load('tidyverse', 'magrittr', 'kableExtra','stargazer', 'here', 'IAplots')
+
+# if IAplots is not installed yet, install it with: 
+#! install.packages("S:\shared with all economists\R course 2021\sessions\9 markdown\IAplots_0.0.0.9000.zip" ,repos = NULL)
+
+# also, make sure package "extrafont" is also installed and use extrafont::font_import()
+# so IAplots will find the "Alef" font for the ggplot theme. 
+
+# set ggplot theme
+theme_set(IA_theme())
+
+# turn off scientific notation and print 3 decimal digits. 
+options(scipen = 999,digits = 3)
+
+# two function we'll use to make tables look nice: 
+# 1. make nice tables
+IA_kable <- function(x){ 
+  kable(x)%>% 
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = F) 
+} 
+# 2. for large tables we have a scroll box 
+IA_kable_s <- function(x, wi = 800, hi = 200){
+  wi2 <- paste0(wi, "px")
+  hi2 <- paste0(hi, "px")
+  IA_kable(x) %>% scroll_box(width = wi2, height = hi2 )
+}
+
+```
+
+
+# print data 
+__inline print of r code__  
+you can embed one row result inline.  `` `r`` `your code here` `  .  
+for instance: The number of observations in the mtcars data is `r count(mtcars)`
+
+__3 ways to present a table__  
+
+1.  default
+```{r}
+head(mtcars)
+```
+    
+2.  IA_kable
+```{r }
+head(mtcars) %>% IA_kable()
+```
+  
+3. IA_kable_s
+
+```{r}
+mtcars %>% IA_kable_s(600)
+```
+<br>  
+more information can be found here:    
+<https://cran.r-project.org/web/packages/kableExtra/vignettes/awesome_table_in_html.html>
+
+
+
+
+
+# presenting resaults  {.tabset .tabset-fade .tabset-pills}
+## regression 
+
+
+<div dir="rtl">
+הדפסה רגילה של סיכום של רגרסיה באמצעות summary
+</div>
+
+```{r}
+# formula to update later
+f1 <- formula(displ ~ cyl+  drv)
+# run the linear model
+model_1 <- lm(f1, data = mpg) 
+# summary computes the variance matrix
+summary(model_1) 
+
+```
+<br>  
+<div dir="rtl">
+__שימוש ב stargazer  להצגת  ריבוי פלטים__    
+ צריך להגדיר ב chunk את האפשרות results = asis , וב stargazer להגדיר type = 'html'. 
+</div>
+
+```{r, results = 'asis'}
+# add 2 more models
+# update the formula
+f2 <- update(f1, .~ . + cty + hwy + class + fl )
+# save the model
+model_2 <- lm(f2, data = mpg)
+
+# compute robust standard errors for model_2
+library(sandwich)
+cov1   <- vcovHC(model_2, type = "HC1")
+robust_se    <- sqrt(diag(cov1))
+
+# stargazer calculates the variance matrix by itself: 
+stargazer(model_1, model_2, model_2,
+          column.labels = c("model 1", "model 2", "model 2 with robust SE"),
+          type =  'html',
+          single.row = T,
+          report = 'vc*s',
+          se = list(NULL, NULL, robust_se),
+                    omit.stat = c("rsq", "f"))
+
+```
+<br>
+for the stargazer website: <https://www.jakeruss.com/cheatsheets/stargazer/>
+
+stargazer enhances several packages we know:    
+AER, gmm, lfe, lme4, lmtest, MASS, plm, and quantreg.
+
+
+
+## plot
+<div dir="rtl">
+אפשר להגדיר ב chunk את גובה ורוחב התרשים, וכן לרשום caption
+</div>
+
+
+```{r small plot, fig.width = 7, fig.height = 3,  fig.cap = "this is a caption for the figure", fig.align="center"}
+p1 <- ggplot(data = diamonds) +
+  geom_bar(mapping = aes(x = cut), color = "dodgerblue3",size =2) +
+  scale_y_continuous(labels = scales::label_number(accuracy = 1, scale = 0.001, suffix = "k")) +
+  labs(title = "כותרת הגרף מתוך הפונקציה")
+p1
+
+```
+
+
+```{r larger plot, fig.width= 10, fig.height= 3}
+p1
+
+```
+
+for the recent (work in progress) ggplot book :  
+<https://ggplot2-book.org/>
+
+## noteable chunk options  
+
+- __eval__  : (TRUE; logical or numeric) Whether to evaluate the code chunk. It can also be a numeric vector to choose which R expression(s) to evaluate, e.g., eval = c(1, 3, 4) will evaluate the first, third, and fourth expressions, and eval = -(4:5) will evaluate all expressions except the fourth and fifth.
+
+- __echo__ : (TRUE; logical or numeric) Whether to display the source code in the output document. can take specifics like in the eval example
+
+- __cache__ : (FALSE; logical) Whether to cache a code chunk. When evaluating code chunks for the second time, the cached chunks are skipped (unless they have been modified),
+
+
+- __out.width,out.height__: (NULL; character) Width and height of the plot in the output document, which can be different with its physical fig.width and fig.height, i.e., plots can be scaled in the output document.
+ 
+
+- __message, warning__:  (TRUE; logical) Whether to preserve warnings or messages in the output. If FALSE, all warnings will be printed in the console instead of the output document. ( can also take numeric values as indices to select a subset of warnings to include in the output)
+
+- __error__  :(FALSE; logical) R will stop on error when running the code chunks.Sometimes you may want to show errors on purpose. If you want to show the errors without stopping R, you may use the chunk option error = TRUE
+
+
+<br>
+for full list of knitr option go to: <https://yihui.org/knitr/options/>  
+the cookbook is useful as well : <https://bookdown.org/yihui/rmarkdown-cookbook/chunk-options.html>
+
+
+
+# links to sources   
+[get started page on RDtudio](https://rmarkdown.rstudio.com/lesson-1.html)  
+[The Definitive Guide](https://bookdown.org/yihui/rmarkdown/)  
+[cook book](https://bookdown.org/yihui/rmarkdown-cookbook/)  
+[markdown reference guide](https://rstudio.com/wp-content/uploads/2015/03/rmarkdown-reference.pdf)  
+[cheat sheet](https://www.rstudio.org/links/r_markdown_cheat_sheet)  
+
+
+# session info {-}
+```{r session info}
+sessionInfo()
+```
+
+

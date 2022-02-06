@@ -1,0 +1,26 @@
+h1, h2, h3, h4, h5, h6 {
+  font-family: Alef;
+}
+
+h1, h2, h3 {
+margin-top: 1.5em;
+}
+
+p {
+  font-family: Alef;
+}
+
+.pink-box {
+  background-color: #fbd3c6;
+  border-radius: 5px;
+  padding: 20px;
+  margin-bottom: 10px;
+}
+
+
+.blue-box {
+  background-color: #e6f0ff;
+  border-radius: 5px;
+  padding: 20px;
+  margin-bottom: 10px;
+}
