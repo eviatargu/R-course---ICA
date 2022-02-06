@@ -1,0 +1,235 @@
+---
+title: "Resahping data"
+subtitle: "lession 5a"
+author: "Eviatar Guttman"
+date: "Last updated: `r format(Sys.time(), '%d-%m-%Y')`"  
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: no
+    smooth_scroll: yes
+    fig_caption: yes
+    highlight: tango
+    theme: flatly
+    css: ../style.css
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+---  
+```{r setup, include = F}
+# global chunk options
+knitr::opts_chunk$set(echo = T,
+                      warning = T,
+                      message = T,
+                      tidy=TRUE,
+                      fig.align = 'center',
+                      collapse = TRUE)
+
+# don't show NA's in tables
+options(knitr.kable.NA = '')
+
+```
+
+```{r}
+library(tidyverse)
+```
+
+# introduction  
+<div dir="rtl">
+החבילה [tidyr](https://tidyr.tidyverse.org/)
+עוזרת להפוך טבלת נתונים ל-tidy. יש בה כמה פונקציות יעילות :  
+`drop_na` - מסירה שורות שמכילות ערכים חסרים.  
+`fill` - ממלאת ערכים חסרים בערך שקיים בשורה שמתחת או בשורה או שורות שמעל.  
+`replace_na` מחליפה ערכים חסרים בערכים לבחירת המשתמש.   
+  
+בנוסף, יש כמה תחליפים לפונקציות ב-`stringr`:  
+`extract`  ו-`separate` - מחלצות מתוך strings תבניות טקטס באמצעות regular expressions או מיקום ומחלקות את העמודה למספר עמודות.   
+`unite` מאחדת כמה עמודות ומדביקה אותם ל-string יחיד.   
+  
+`pivot_longer` ו-`pivot_wider` מאפשר לשנות מבנה טבלה כדך שתהיה ארוכה יותר או קצרה יותר בהתאמה.   
+</div>
+
+# pivot_longer  
+<div dir="rtl">
+התבוננו בטבלה הזו בעבר:
+</div>
+```{r}
+table1
+```
+
+<div dir="rtl">
+נתנו דוגמא לטבלה שאיננה tidy:
+</div>
+```{r}
+table4a
+```
+<div dir="rtl">
+`pivot_longer` מאריך את טבלת הנתונים, מגדיל מספר שורות, ומקטין מספר עמודות. 
+</div>
+```{r}
+table4a %>% pivot_longer(cols = c(`1999`, `2000`))
+```
+<div dir="rtl">
+Backtics `  זה הסימון בכדי לבחור עמודות עם שמות לא תחביריים. 
+</div>
+<br>
+<div dir="rtl">
+נוסיף שמות לטבלת הנתונים חדשה
+</div>
+```{r}
+table4a %>% 
+  pivot_longer(cols = c(`1999`, `2000`), names_to = "year", values_to = "cases")
+```
+<div dir="rtl">
+הסתכלנו בעבר גם על טבלת נתוני ה-`billboard`. 
+</div>
+```{r}
+head(billboard)
+
+
+pivot_longer(data = billboard,        # data      
+             cols = starts_with("wk"),# columns to pivot into longer format
+             names_to = "week",       # name of the new column from previous columns
+             values_to = "rank",      # name of the new columns from previous data
+             names_prefix = "wk",     # remove the "wk" from the column names - regular expression
+             values_drop_na = T)      # converts explicit missing values to implicit missing values
+```
+
+# pivot_wider
+<div dir="rtl">
+בדוגמא זו, נרצה לחלץ את הנתונים בעמודת ה-`count` לשני משתנים שונים
+</div>
+```{r}
+table2
+
+pivot_wider(table2, names_from = type, values_from = count)
+```
+
+<div dir="rtl">
+הטבלה `fish_encounters` מכילה מידע על דגים שנצפו בנקודות תצפיות שונות.
+</div>
+```{r}
+head(fish_encounters)
+
+# the column "seen" has only one value
+table(fish_encounters$seen)
+
+```
+<div dir="rtl">
+מה שלא נראה, לא קיבל תיעוד בטבלה
+</div>
+```{r}
+fish_encounters %>%
+  pivot_wider(names_from = station, values_from = seen)
+```
+<div dir="rtl">
+כדאי למלא את הערכים החסרים ב-0
+</div>
+```{r}
+fish_encounters %>%
+  pivot_wider(names_from = station, values_from = seen, values_fill =  0)
+```
+
+<div dir="rtl">
+נראה דוגמא לחילוץ הערכים משתי עמודות:    
+
+הטבלה `us_rent_income` מכילה מידע על הכנסות משכר דירה בשוק האמריקאי.    
+המשתנה `Variable` כולל את ההכנסה החציונית income, וכן את השכר דירה החציוני rent.    
+`estimate` כולל את הערכים שנאמדו.      
+`moe` הוא רווח סמך של 90%.    
+</div>
+
+```{r}
+us_rent_income
+```
+income and rent should be in separate columns, but there are 2 columns with data: 
+```{r}
+us_rent_income %>%
+  pivot_wider(names_from = variable,
+              values_from = c(estimate, moe))
+
+```
+
+# non unique data
+<div dir="rtl">
+אם הנתונים לא מזוהים באופן ייחודי, ניתן לבצע אגרגציה עם הארגומנט `values_fn`.  
+בטבלה הבאה יש מספר ערכים בעמודה `breadks` עבור אותם ערכים בשתי העמודות הראשונות. ניתן לעשות סכימה של הערכים עם   `group_by` וגם ניתן לעשות זאת תוך כדי הפיכת הנתונים ל-wider.  
+</div>
+```{r}
+(warpbreaks <- as_tibble(warpbreaks[c("wool", "tension", "breaks")]))
+
+warpbreaks %>% group_by(wool, tension) %>% summarise(mean_breaks = mean(breaks))
+
+
+warpbreaks %>%
+  pivot_wider(
+    names_from = wool,
+    values_from = breaks,
+    values_fn = mean
+  )
+```
+
+<div dir="rtl">
+יש עוד טכניקות שימושיות בפונקציות ה- `pivot`. ניתן לקרוא על כך במאמר [pivoting](https://tidyr.tidyverse.org/articles/pivot.html) 
+באתר האינטרנט של `tidyr`.
+</div>
+
+# exercises 
+<div dir="rtl">
+1. מדוע התוצאות של `pivot_longer` ושל `pivot_wider` הן לא סימטריות? 
+בחן את הדוגמא הבאה:   
+</div>
+```{r}
+stocks <- tibble(
+  year   = c(2015, 2015, 2016, 2016),
+  half  = c(   1,    2,     1,    2),
+  return = c(1.88, 0.59, 0.92, 0.17)
+)
+
+stocks %>% 
+  pivot_wider(names_from = year, values_from = return) %>% 
+  pivot_longer(`2015`:`2016`, names_to = "year", values_to = "return")
+```
+<div dir="rtl">
+רמז: בחן את סוג העמודות וחשוב על שמות העמודות  
+  
+ל-`pivot_longer` יש ארגומנט בשם `names_ptypes`. למשל: `names_ptypes = list(year = double()). מה הוא עושה?   
+  
+2. מדוע הקוד הבא לא עובד?   
+</div>
+```{r, error=TRUE}
+table4a %>% 
+  pivot_longer(c(1999, 2000), names_to = "year", values_to = "cases")
+```
+<div dir="rtl">
+3. מה היה קורה אילו היינו מרחיבים את הטבלה הבאה? מדוע? איך ניתן להוסיף עוד עמודה אשר תזהה באופן יחיד כל ערך?   
+</div>
+```{r}
+people <- tribble(
+  ~name,             ~names,  ~values,
+  #-----------------|--------|------
+  "Phillip Woods",   "age",       45,
+  "Phillip Woods",   "height",   186,
+  "Phillip Woods",   "age",       50,
+  "Jessica Cordero", "age",       37,
+  "Jessica Cordero", "height",   156
+  )
+```
+
+<div dir="rtl">
+4. הפוך את הטבלה הבאה כך שתהיה tidy. האם צריך לעשותה קצרה יותר או ארוכה יותר? מה הם המשתנים? 
+</div>
+```{r}
+(preg <- tribble(
+  ~pregnant, ~male, ~female,
+  "yes",     NA,    10,
+  "no",      20,    12
+))
+
+```
+
+
+

@@ -1,0 +1,265 @@
+---
+title: "Factors"
+subtitle: "lession 5c"
+author: "Eviatar Guttman"
+date: "Last updated: `r format(Sys.time(), '%d-%m-%Y')`"  
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: no
+    smooth_scroll: yes
+    fig_caption: yes
+    highlight: tango
+    theme: flatly
+    css: ../style.css
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+---  
+```{r setup, include = F}
+# global chunk options
+knitr::opts_chunk$set(echo = T,
+                      warning = T,
+                      message = T,
+                      tidy=T,
+                      fig.align = 'center',
+                      collapse = TRUE)
+
+# don't show NA's in tables
+options(knitr.kable.NA = '')
+
+```
+
+```{r}
+library(tidyverse)
+```
+
+# intro
+<div dir="rtl">
+`factors` משמשים לעבודה עם משתנים קטגוריים עם קבוצה סגורה של ערכים אפשריים.     
+`factors` שימושיים כאשר רוצים להציג וקטור character  בסדר שאינו אלפבתי.   
+</div>
+
+# create factor
+<div dir="rtl">
+בנתוני חודשים, יש 12 ערכים אפשריים. 
+עשויות להיות טעויות הקלדה:  
+</div>
+
+```{r}
+x1 <- c("Dec", "Apr", "Jam", "Mar")
+```
+
+<div dir="rtl">
+מיון הווקטור לא נעשה בצורה מועילה
+</div>
+```{r}
+sort(x1)
+```
+<div dir="rtl">
+אפשר לתקן את שתי הבעיות עם `factor`
+</div>
+```{r}
+month_levels <- c(
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+y1 <- factor(x1, levels = month_levels)
+y1
+
+sort(y1)
+
+sort(y1, na.last = T)
+```
+<div dir="rtl">
+טעויות הופכות ל-`NA`.
+  
+  
+אם ההעדפה היא לסדר של ה-`levels`  כפי שהוא מופיע לראשונה בנתונים אפשר להשתמש ב-`unique` או ב-`fct_inorder`.
+</div>
+```{r}
+f1 <- factor(x1, levels = unique(x1))
+f1
+
+f2 <- x1 %>% factor() %>% fct_inorder()
+f2
+
+levels(f2)
+
+```
+<div dir="rtl">
+`ggplot` משמיטה `levels` שלא מופיעים בנתונים. הצג אותם באמצעות: 
+</div>
+```{r}
+ggplot(gss_cat, aes(race)) +
+  geom_bar() +
+  scale_x_discrete(drop = FALSE)
+```
+
+# Modifying factor order
+
+```{r}
+head(gss_cat)
+
+relig_summary <- gss_cat %>%
+  group_by(relig) %>%
+  summarise(
+    age = mean(age, na.rm = TRUE),
+    tvhours = mean(tvhours, na.rm = TRUE),
+    n = n())
+
+ggplot(relig_summary, aes(tvhours, relig)) + geom_point()
+```
+
+<div dir="rtl">
+`fct_reorder` שימושי כאשר ה-`levels` מסודרים באופן שרירותי.   
+יש לפונקציה שלושה ארגומנטים:   
+1.	המשתנה x שרוצים לשנות  
+2.	ווקטור נומרי שבו רוצים לשתמש בכדי לסדר מחדש את ה-`levels`.   
+3.	אופציונלי, פונקציה בה אפשר להשתמש במקרים בהם יש מספר ערכים ב-x עבור כל ערך בווקטור הנומרי. (ברירת המחדל היא החציון).    
+  
+נשתמש ב-`fct_reorder` כדי לסדר מחדש את ה `levels` של המשתנה `relig`.
+</div>
+  
+```{r}
+relig_summary %>% arrange(-tvhours) %>% head()
+
+ggplot(relig_summary, aes(tvhours, fct_reorder(relig, tvhours))) +
+  geom_point()
+```
+    
+<div dir="rtl">
+מוטב לסדר מחדש את המשתנה מחוץ לפונקציית ה-ggplot. 
+</div>
+```{r}
+relig_summary %>%
+  mutate(relig = fct_reorder(relig, tvhours)) %>%
+  ggplot(aes(tvhours, relig)) +
+    geom_point()
+```
+<div dir="rtl">
+בדוגמא הבאה, אין טעם בלסדר את הווקטור על פי ווקטור אחר
+</div>
+```{r}
+rincome_summary <- gss_cat %>%
+  group_by(rincome) %>%
+  summarise(
+    age = mean(age, na.rm = TRUE),
+    tvhours = mean(tvhours, na.rm = TRUE),
+    n = n()
+  )
+
+rincome_summary
+```
+
+<div dir="rtl">
+נוציא את "Not applicable" קדימה עם ה-levels המיוחדים האחרים. 
+נשתמש ב-`fct_relevel`.
+</div>
+```{r}
+ggplot(rincome_summary, aes(age, fct_relevel(rincome, "Not applicable"))) +
+  geom_point()
+
+```
+
+<div dir="rtl">
+ב-`bar plots` ניתן להשתמש ב-`fct_infreq` כדי לסדר את ה-levels  בתדירות עולה
+</div>
+```{r}
+gss_cat %>%
+  ggplot(aes(marital)) +
+    geom_bar()
+
+gss_cat %>%
+  mutate(marital = marital %>% fct_infreq() %>% fct_rev()) %>%
+  ggplot(aes(marital)) +
+    geom_bar()
+```
+
+
+# Modify factor levels
+<div dir="rtl">
+`fct_recode` משמש בכדי לשנות `levels` באופן ידני
+</div>
+```{r}
+gss_cat %>% count(partyid)
+
+gss_cat %>%
+  mutate(partyid = fct_recode(partyid,
+    "Republican, strong"    = "Strong republican",
+    "Republican, weak"      = "Not str republican",
+    "Independent, near rep" = "Ind,near rep",
+    "Independent, near dem" = "Ind,near dem",
+    "Democrat, weak"        = "Not str democrat",
+    "Democrat, strong"      = "Strong democrat")
+    ) %>%
+  count(partyid)
+
+```
+<div dir="rtl">
+בכדי לאחד בין קבוצות, אפשר להקצות את אותו level חדש למספר levels  בקידוד הישן. 
+</div>
+```{r}
+gss_cat %>%
+  mutate(partyid = fct_recode(partyid,
+    "Republican, strong"    = "Strong republican",
+    "Republican, weak"      = "Not str republican",
+    "Independent, near rep" = "Ind,near rep",
+    "Independent, near dem" = "Ind,near dem",
+    "Democrat, weak"        = "Not str democrat",
+    "Democrat, strong"      = "Strong democrat",
+    "Other"                 = "No answer",
+    "Other"                 = "Don't know",
+    "Other"                 = "Other party")
+    ) %>%
+  count(partyid)
+```
+<div dir="rtl">
+קפל `levels` באמצעות `fct_collapse`.
+</div>
+```{r}
+gss_cat %>%
+  mutate(partyid = fct_collapse(partyid,
+    other = c("No answer", "Don't know", "Other party"),
+    rep = c("Strong republican", "Not str republican"),
+    ind = c("Ind,near rep", "Independent", "Ind,near dem"),
+    dem = c("Not str democrat", "Strong democrat")
+  )) %>%
+  count(partyid)
+```
+
+<div dir="rtl">
+ב-`fct_lump` אפשר להשתמש בארגומנט `n` בכדי לקבוע כמה קבוצות יישארו 
+למעט `other`
+</div>
+```{r}
+gss_cat %>%
+  mutate(relig = fct_lump(relig, n = 5)) %>%
+  count(relig, sort = TRUE) 
+```
+
+<div dir="rtl">
+יש עוד גרסאות ל-`fct_lump` :  
+`fct_lump_min` מקפל `levels` שמופיעים פחות מהמינימום שהוגדר בפונקציה.    
+`fct_lump_prop` מקפל `levels`  שמופיעים פחות מפרופורציה מסוימת. 
+  
+  
+אם אתם זקוקים לפתרונות נוספים לעבודה עם `factors` בדקו אפשרויות נוספות בחבילה 
+[forcats](https://forcats.tidyverse.org/)
+</div>
+
+
+# exercises  
+<div dir="rtl">
+1.בחן את ההתפלגות של המשתנה `rincome` (reported income). מה הופך את ה-bar plot  הבסיסי קשה להבנה. כיצד ניתן לשפר זאת?   
+2. מהי הדת הנפוצה ביותר במדגם?   
+3.במשתנה `tvhours` יש מספרים גדולים באופן תמוה. האם הממוצע הוא סיכום טוב לנתונים?   
+4. עבור כל משתנה `factor`  בטבלת הנתונים `gss_cat` זהה את הסדר של ה-`levels` ובדוק האם הסדר שרירותי הוא שמישהו סידר אותו ע"פ היגיון כלשהו?     
+5. כיצד הפרופורציות של דמוקרטים ורפובליקנים במדגם משתנות לאורך זמן?   
+6. כיצד ניתן לצמצם את מספר הקטגוריות של `rincome` כך שיהיו פחות קטגוריות?
+</div>
+
+
