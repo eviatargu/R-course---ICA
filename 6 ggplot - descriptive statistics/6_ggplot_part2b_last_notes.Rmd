@@ -1,0 +1,737 @@
+---
+title: "ggplot - last notes"
+subtitle: "session 6b"
+author: "Eviatar Guttman"
+date: "Last updated: `r format(Sys.time(), '%d-%m-%Y')`"  
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: no
+    smooth_scroll: yes
+    fig_caption: yes
+    highlight: tango
+    theme: flatly
+    css: ../style.css
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+---  
+```{r setup, include = F}
+# global chunk options
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = TRUE,
+                      message = T,
+                      tidy=TRUE,
+                      fig.align = 'center',
+                      collapse = TRUE,
+                      fig.width = 5,
+                      fig.asp = 5/7)
+
+# don't show NA's in tables
+options(knitr.kable.NA = '')
+
+```
+
+```{r, message=FALSE}
+library(tidyverse); library(patchwork)
+```
+
+# scales  
+## intro  
+<div dir="rtl">  
+באופן פורמלי כל `scale` הוא פונקציה מתחום במרחב הנתונים לטווח במרחב האסטטי.  
+כל רכיב אסטטי (aesthetic) בגרף מתאים ל-scale אחד ויחיד.     
+כאשר אנו כותבים את הקוד הבא: 
+</div>
+```{r, eval = F}
+ggplot(mpg, aes(displ, hwy)) + 
+  geom_point(aes(colour = class))
+```
+<div dir="rtl">  
+Ggplot מוסיפה את ה-scales  הבאים: 
+</div>    
+```{r}
+ggplot(mpg, aes(displ, hwy)) + 
+  geom_point(aes(colour = class)) +
+  scale_x_continuous() + 
+  scale_y_continuous() + 
+  scale_colour_discrete()
+```
+
+<div dir="rtl">  
+ggplot   בוחרת את ה-scale לפי סוג ה-aesthetic ולפי סוג המשתנה.
+    
+אם רוצים לשנות את ערך ברירת המחדל, יש להוסיף את פונקציית ה-scale בעצמנו ולבחור ערכים.
+</div>    
+```{r}
+ggplot(mpg, aes(displ, hwy)) + 
+  geom_point(aes(colour = class)) + 
+  scale_x_continuous(name = "A really awesome x axis label") +
+  scale_y_continuous(name = "An amazingly great y axis label")
+```
+
+<div dir="rtl">  
+אם המשתמש מספק שני scales  לאותו aesthetic, אז האחרון הוא שקובע.   
+  
+    
+דוגמא נוספת: 
+נהפוך את ה-aesthetic של גודל הנקודה: 
+</div>    
+```{r, fig.width = 7}
+df <- data.frame(x = runif(20), y = runif(20), z = sample(20))
+
+head(df)
+
+base <- ggplot(df, aes(x, y, size = z)) + geom_point()
+
+p1 <- base 
+p2 <- base + scale_size(trans = "reverse")
+
+p1 + p2
+```
+<div dir="rtl">  
+ניתן לפרש את התרשים השמאלי כמשקל או גודל קבוצה. את התרשים הימני ניתן לפרש כמרחק.   
+</div>    
+  
+    
+<div dir="rtl">  
+המידע שהצופה מפענח מציר ה-x, y או ה-legend נקרא guide. ה-guide הוא תוצאה של פונקציה הפוכה, ההופכת בחזרה את המידע ויזואלי לנתונים.   
+</div>    
+```{r echo=FALSE, out.width='100%'}
+knitr::include_graphics('./6_images/scale-guides.png')
+```
+<div dir="rtl">  
+את ה-legend  ניתן לשנות בכל מיני אופנים, הם יכולים להציג יותר מ-aesthetic  אחד, הם יכולים להופיע במקומות שונים בגרף ויש יותר מאפיינים שניתן לשנות בהם. 
+</div>    
+### exercise
+<div dir="rtl">    
+מה יקרה אם נשדך משתנה בדיד ל-scale  רציף? מה יקרה אם נשדך משתנה רציף ל-scale בדיד? 
+</div>    
+
+
+## numeric
+most common continuous position scales are default `scale_x_continuous()` and `scale_y_continuous()` functions. 
+simplest case - map linearly from the data value to a location on the plot.
+non linear examples  are: `scale_x_log10()`, `scale_x_reverse()`, 
+
+```{r, fig.width= 7 }
+p1 <- ggplot(mpg, aes(displ, hwy)) + geom_point()
+
+p2 <- p1 + scale_x_reverse()
+p3 <- p1 + scale_y_reverse()
+
+p1 + p2 + p3
+```
+
+check the list of options in the the argument `trans` in `?scale_x_continuous()`
+
+
+## transformation   
+```{r}
+ggplot(mpg, aes(displ, hwy)) + 
+  geom_point() + 
+  scale_y_continuous(trans = "reciprocal")
+
+# log transform x and y axes
+ggplot(diamonds, aes(price, carat)) + 
+  geom_bin2d() + 
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10")
+```
+
+<div dir="rtl">    
+יש הבדל בין שינוי scale לבין טרנספורמציה למשתנה עצמו
+</div> 
+
+Note that there is nothing preventing you from performing these transformations manually. For example, instead of using `scale_x_log10()` to transform the scale, you could transform the data instead and plot `log10(x)`. The appearance of the geom will be the same, but the tick labels will be different. Specifically, if you use a transformed scale, the axes will be labeled in the original data space; if you transform the data, the axes will be labeled in the transformed space.
+  
+Regardless of which method you use, the transformation occurs before any statistical summaries.
+  
+```{r, fig.width= 7 }
+p0 <- ggplot(mpg, aes(displ, hwy)) + geom_point()
+
+p1 <- ggplot(mpg, aes(displ, log(hwy))) + geom_point()
+
+p2 <- ggplot(mpg, aes(displ, hwy)) + geom_point() + scale_y_continuous(trans = "log")
+
+p0 + p1 + p2
+```
+
+
+
+## breaks
+the breaks argument controls which values appear as tick marks on axes and as keys on legends.
+
+```{r, fig.width= 7 }
+toy <- data.frame(
+  const = 1, 
+  up = 1:4,
+  txt = letters[1:4], 
+  big = (1:4)*1000,
+  log = c(2, 5, 10, 2000)
+)
+toy
+
+axs <- ggplot(toy, aes(big, const)) + 
+  geom_point() + 
+  labs(x = NULL, y = NULL)
+
+p1 <- axs
+p2 <- axs + scale_x_continuous(breaks = c(2000, 4000))
+p1 + p2
+
+
+leg <- ggplot(toy, aes(up, up, fill = big)) + 
+  geom_tile() + 
+  labs(x = NULL, y = NULL) 
+
+p1 <- leg 
+p2 <- leg + scale_fill_continuous(breaks = c(2000, 4000))
+
+p1 + p2
+```
+
+
+there are functions to automate the breaks:   
+  
+`scales::breaks_extended()` creates automatic breaks for numeric axes.  
+`scales::breaks_log()` creates breaks appropriate for log axes.  
+`scales::breaks_pretty()` creates “pretty” breaks for date/times.  
+`scales::breaks_width()` creates equally spaced breaks.  
+```{r, fig.width= 7 }
+toy <- data.frame(
+  const = 1, 
+  up = 1:4,
+  txt = letters[1:4], 
+  big = (1:4)*1000,
+  log = c(2, 5, 10, 2000)
+)
+toy
+
+axs <- ggplot(toy, aes(big, const)) + 
+  geom_point() + 
+  labs(x = NULL, y = NULL)
+
+p1 <- axs
+
+p2 <- axs + scale_x_continuous(breaks = scales::breaks_extended())
+
+p3 <- axs + scale_x_continuous(breaks = scales::breaks_extended(n = 2))
+
+p1 + p2 + p3
+
+
+p1 <- axs + scale_x_continuous(breaks = scales::breaks_width(800))
+p2 <- axs + scale_x_continuous(breaks = scales::breaks_width(800, offset = 200))
+p3 <- axs + scale_x_continuous(breaks = scales::breaks_width(800, offset = -200))
+p4 <-  axs + scale_x_continuous(breaks = NULL)
+
+p1 + p2 + p3 + p4 
+
+```
+  
+## labels    
+A function passed to labels should accept a numeric vector of breaks as input and return a character vector of labels (the same length as the input)  
+<div dir="rtl">  
+החבילה scales כוללת הרבה סקאלות שימושיות
+</div> 
+  
+`scales::label_bytes()` formats numbers as kilobytes, megabytes etc.  
+`scales::label_comma()` formats numbers as decimals with commas added.  
+`scales::label_dollar()` formats numbers as currency.  
+`scales::label_ordinal()` formats numbers in rank order: 1st, 2nd, 3rd etc.  
+`scales::label_percent()` formats numbers as percentages.   
+
+```{r, fig.width= 7 }
+p1 <- axs + scale_y_continuous(labels = scales::label_percent())
+
+p2 <- axs + scale_y_continuous(labels = scales::label_dollar(prefix = "", suffix = "€"))
+
+p3 <- axs + scale_x_continuous(labels = NULL)
+
+p1 + p2 +p3
+```
+
+
+## Date-time  
+If your dates
+are in a different format you will need to convert them using `as.Date()` , `as.POSIXct()` or `hms::as_hms()`
+
+### breaks  
+
+`scale_x_datetime()`  
+The date_breaks argument allows you to position breaks by date units (years, months, weeks, days, hours, minutes, and seconds). For example, `date_breaks = "2 weeks"` will place a major tick mark every two weeks and `date_breaks = 25 years"` will place them every 25 years:
+
+
+```{r}
+date_base <- ggplot(economics, aes(date, psavert)) + 
+  geom_line(na.rm = TRUE) +
+  labs(x = NULL, y = NULL)
+
+date_base 
+
+date_base + scale_x_date(date_breaks = "25 years")
+```
+
+It may be useful to note that internally `date_breaks = "25 years"` is treated as a shortcut for `breaks = scales::breaks_width("25 years")`. The longer form is typically unnecessary, but it can be useful if—as discussed in Section 1.4 —you wish to specify an offset. Suppose the goal is to plot data that span the 20th century, beginning 1 January 1900, and we wish to set breaks in 25 year intervals. Specifying `date_breaks = "25 years"` produces breaks in the following fashion:
+```{r}
+century20 <- as.Date(c("1900-01-01", "1999-12-31"))
+
+breaks <- scales::breaks_width("25 years")
+
+breaks(century20)
+```
+
+Because the range in century 20 starts on 1 January and the breaks increment in whole year values, each of the generated break dates falls on 1 January. We can shift all these breaks so that they fall on 1 February by setting offset = 31 (since there are thirty one days in January).
+
+__minor breaks __ 
+```{r}
+date_base + scale_x_date(
+  limits = as.Date(c("2003-01-01", "2003-04-01")),
+  date_breaks = "1 month"
+)
+
+date_base + scale_x_date(
+  limits = as.Date(c("2003-01-01", "2003-04-01")),
+  date_breaks = "1 month",
+  date_minor_breaks = "1 week"
+)
+```
+
+
+### labels
+
+Like date_breaks, date scales include a date_labels argument. It controls the display of the labels using the same formatting strings as in `strptime()` and `format()`.  
+"%d/%m/%Y"
+
+String	Meaning
+%S	second (00-59)  
+%M	minute (00-59)  
+%l	hour, in 12-hour clock (1-12)  
+%I	hour, in 12-hour clock (01-12)  
+%p	am/pm  
+%H	hour, in 24-hour clock (00-23)  
+%a	day of week, abbreviated (Mon-Sun)  
+%A	day of week, full (Monday-Sunday)  
+%e	day of month (1-31)  
+%d	day of month (01-31)  
+%m	month, numeric (01-12)  
+%b	month, abbreviated (Jan-Dec)  
+%B	month, full (January-December)  
+%y	year, without century (00-99)  
+%Y	year, with century (0000-9999)  
+
+```{r}
+base <- ggplot(economics, aes(date, psavert)) + 
+  geom_line(na.rm = TRUE) +
+  labs(x = NULL, y = NULL)
+
+base + scale_x_date(date_breaks = "5 years")
+
+base + scale_x_date(date_breaks = "5 years", date_labels = "%y")
+
+lim <- as.Date(c("2004-01-01", "2005-01-01"))
+
+base + scale_x_date(limits = lim, date_labels = "%b %y")
+base + scale_x_date(limits = lim, date_labels = "%B\n%Y")
+
+base + scale_x_date(labels = scales::label_date("%b %y"))
+
+base + scale_x_date(limits = lim, labels = scales::label_date_short())
+
+```
+
+## Discrete  
+When the data are categorical, you also have the option of using a named vector to set the labels associated with particular values. This allows you to change some labels and not others, without altering the ordering or the breaks:
+
+```{r, fig.width= 7}
+base <- ggplot(toy, aes(const, txt)) + 
+  geom_point() +
+  labs(x = NULL, y = NULL)
+
+base2 <- base + scale_y_discrete(labels = c(c = "carrot", b = "banana"))
+
+base + base2
+```
+
+
+## Limits  
+
+
+```{r, fig.width= 7}
+df <- data.frame(x = 1:3, y = 1:3)
+base <- ggplot(df, aes(x, y)) + geom_point() 
+
+p1 <- base
+p2 <- base + scale_x_continuous(limits = c(0, 4))
+p3 <- base + scale_x_continuous(limits = c(1.5, 2.5))
+
+p1 + p2 + p3
+```
+
+<div dir="rtl">  
+הרחבה של ה limit מועיל כאשר רוצים שני גרפים עם תחום זהה בצירים או ב Legend.
+</div>
+
+```{r}
+ggplot(mpg, aes(displ, hwy, colour = fl)) + 
+  geom_point() +
+  facet_wrap(vars(year))
+```
+
+<div dir="rtl">  
+שני גרפים שונים עם levels שונים במשתנה הקטגורי, מקצים צבעים שונים ל-levels. 
+</div>
+
+```{r, fig.width= 7 }
+mpg_99 <- mpg %>% filter(year == 1999)
+mpg_08 <- mpg %>% filter(year == 2008)
+
+base_99 <- ggplot(mpg_99, aes(displ, hwy, colour = fl)) + geom_point() 
+base_08 <- ggplot(mpg_08, aes(displ, hwy, colour = fl)) + geom_point() 
+
+base_99 + base_08
+```
+
+<div dir="rtl">  
+ניתן לפתור זאת באמצעות הקצאת limits 
+</div>
+
+```{r, fig.width= 7}
+p1 <- base_99 + scale_color_discrete(limits = c("c", "d", "e", "p", "r"))
+p2 <- base_08 + scale_color_discrete(limits = c("c", "d", "e", "p", "r"))
+
+p1 + p2
+
+```
+<div dir="rtl">  
+נטפל גם בגבולות הצירים
+</div>
+```{r, fig.width= 7 }
+p1 <- base_99 + lims(x = c(1, 7), y = c(10, 45), colour = c("c", "d", "e", "p", "r"))
+p2 <- base_08 + lims(x = c(1, 7), y = c(10, 45), colour = c("c", "d", "e", "p", "r"))
+
+p1 + p2
+```
+
+<div dir="rtl">  
+אפשרויות נוספות:    
+</div>
+`xlim(10, 20)`: a continuous scale from 10 to 20  
+`ylim(20, 10)`: a reversed continuous scale from 20 to 10  
+`xlim("a", "b", "c")`: a discrete scale  
+`xlim(as.Date(c("2008-05-01", "2008-08-01")))`: a date scale from May 1 to August 1 2008   
+
+
+## guides 
+The `guides()` helper works in a similar way to the `labs()` helper function
+both take the name of different aesthetics (e.g., color, x, fill) as arguments and allow you to specify your own value
+the `labs` allows to change the names while the `guide` is used to specify the guide of the scale: 
+```{r, fig.width=7}
+base <- ggplot(mpg, aes(displ, hwy, colour = cyl)) + geom_point()
+
+p1 <- base 
+p2 <- base + scale_colour_continuous(guide = guide_coloursteps())
+p3 <- base + guides(colour = guide_coloursteps())
+p1 + p2 + p3
+```
+
+Many of the arguments to the guide function are equivalent to theme settings like text colour, size, font etc, but only apply to a single guide. 
+
+__guide_axis__
+```{r}
+base <- ggplot(mpg, aes(manufacturer, hwy)) + geom_boxplot() 
+
+base + guides(x = guide_axis(n.dodge = 3))
+base + guides(x = guide_axis(angle = 90))
+```
+
+## legend
+for legends to be merged, they must have the same name. So if you change the name of one of the scales, you’ll need to change it for all of them. One way to do this is by using `labs()` helper function:
+```{r, fig.width=7}
+toy <- data.frame(
+  const = 1, 
+  up = 1:4,
+  txt = letters[1:4], 
+  big = (1:4)*1000,
+  log = c(2, 5, 10, 2000)
+)
+toy
+base <- ggplot(toy, aes(const, up)) + 
+  geom_point(aes(shape = txt, colour = txt)) + 
+  scale_x_continuous(NULL, breaks = NULL)
+
+p1 <- base
+p2 <- base + labs(shape = "Split legend")
+p3 <- base + labs(shape = "Merged legend", colour = "Merged legend")
+
+p1 + p2 + p3
+```
+
+
+# colors
+In R, colors can be specified either by name (e.g `col = “red”`) or as a hexadecimal RGB triplet (such as `col = “#FFCC00”`) You can also use other color systems
+R knows 657 colors by name here are the first 60
+
+```{r}
+showCols <- function(cl=colors(), bg = "grey",
+                     cex = 0.75, rot = 30) {
+    m <- ceiling(sqrt(n <-length(cl)))
+    length(cl) <- m*m; cm <- matrix(cl, m)
+    require("grid")
+    grid.newpage(); vp <- viewport(w = .92, h = .92)
+    grid.rect(gp=gpar(fill=bg))
+    grid.text(cm, x = col(cm)/m, y = rev(row(cm))/m, rot = rot,
+              vp=vp, gp=gpar(cex = cex, col = cm))
+  }
+
+showCols(bg="gray20",cl=colors()[1:60], rot=30, cex=0.9)
+
+
+```
+
+Colors can be specified using hexadecimal color code, such as `“#FFC00”`
+and there are ready made color palettes:
+```{r, fig.width= 7 }
+ToothGrowth$dose <- as.factor(ToothGrowth$dose)
+mtcars$cyl <- as.factor(mtcars$cyl)
+
+bp <- ggplot(ToothGrowth, aes(x=dose, y=len, fill=dose)) +
+  geom_boxplot()
+
+sp <- ggplot(mtcars, aes(x=wt, y=mpg, color=cyl)) + geom_point()
+# Box plot
+
+p1 <- bp + scale_fill_manual(breaks = c("2", "1", "0.5"), 
+                       values=c("red", "blue", "green"))
+# Scatter plot
+p2 <- sp + scale_color_manual(breaks = c("8", "6", "4"),
+                        values=c("red", "blue", "green"))
+p1 + p2
+```
+
+change manually discrete:   
+`scale_fill_manual()` for box plot, bar plot, violin plot, etc  
+`scale_color_manual()` for lines and points  
+```{r, fig.width= 7}
+# Box plot
+p1 <- bp + scale_fill_manual(values=c("#999999", "#E69F00", "#56B4E9"))
+# Scatter plot
+p2 <- sp + scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9"))
+
+p1 + p2
+```
+
+better work with naming the values: 
+```{r}
+colors <- c("4" = "#D9717D", "6" = "#4DB6D0", "8" = "#BECA55")
+
+sp +  scale_color_manual(values = colors)
+```
+
+the argument breaks can be used to control the appearance of the legend. This holds true also for the other `scale_xx()` functions.
+
+## color pallets 
+```{r}
+library("RColorBrewer")
+# display.brewer.all() 
+```
+```{r echo=FALSE, out.width='60%'}
+knitr::include_graphics('./6_images/colors.png')
+```
+
+There are 3 types of palettes : sequential, diverging, and qualitative.
+
+
+__Sequential__ palettes are suited to ordered data that progress from low to high (gradient). The palettes names are : Blues, BuGn, BuPu, GnBu, Greens, Greys, Oranges, OrRd, PuBu, PuBuGn, PuRd, Purples, RdPu, Reds, YlGn, YlGnBu YlOrBr, YlOrRd.   
+  
+__Diverging__ palettes put equal emphasis on mid-range critical values and extremes at both ends of the data range. The diverging palettes are : BrBG, PiYG, PRGn, PuOr, RdBu, RdGy, RdYlBu, RdYlGn, Spectral    
+
+__Qualitative__ palettes are best suited to representing nominal or categorical data. They not imply magnitude differences between groups. The palettes names are : Accent, Dark2, Paired, Pastel1, Pastel2, Set1, Set2, Set3  
+
+```{r, fig.width= 7 }
+display.brewer.pal(n = 8, name = 'RdBu')
+
+# Hexadecimal color specification 
+brewer.pal(n = 8, name = "RdBu")
+```
+
+use color palettes
+
+```{r, fig.width=7}
+# Box plot
+p1 <- bp + scale_fill_brewer(palette="Dark2")
+# Scatter plot
+p2 <- sp + scale_color_brewer(palette="Dark2")
+
+p1 + p2
+```
+
+The graph can be colored according to the values of a continuous variable using the functions :
+
+`scale_color_gradient()`, `scale_fill_gradient()` for sequential gradients between two colors.  
+`scale_color_gradient2()`, `scale_fill_gradient2()` for diverging gradients.  
+`scale_color_gradientn()`, `scale_fill_gradientn()` for gradient between n colors
+Gradient colors for scatter plots.   
+
+The graphs are colored using the qsec continuous variable :
+
+```{r, fig.width= 7 }
+# Color by qsec values
+p1 <- ggplot(mtcars, aes(x=wt, y=mpg, color=qsec)) + geom_point()
+
+
+# Change the low and high colors
+# Sequential color scheme
+p2 <- p1 + scale_color_gradient(low="blue", high="red")
+
+# Diverging color scheme
+mid <- mean(mtcars$qsec)
+
+p3 <- p1  + scale_color_gradient2(midpoint=mid, low="blue", mid="white",
+                     high="red", space ="Lab" )
+ p1 + p2 + p3
+
+```
+
+Gradient between n colors
+
+```{r, fig.width=7}
+# Scatter plot
+# Color points by the mpg variable
+p1 <- ggplot(mtcars, aes(x=wt, y=mpg, color=mpg)) + geom_point()
+
+# Gradient between n colors
+p2 <- p1 + scale_color_gradientn(colours = rainbow(5))
+
+p1 + p2
+```
+
+
+# arrangeing plots
+package `patchwork` provides very easy new way of arranging plots together. 
+  
+you can arrange plots side by side with no overlap, or arrange plots on top of each other. 
+
+## side by side
+
+```{r, fig.width=7}
+library(patchwork)
+
+p1 <- ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy))
+
+p2 <- ggplot(mpg) + 
+  geom_bar(aes(x = as.character(year), fill = drv), position = "dodge") + 
+  labs(x = "year")
+
+p3 <- ggplot(mpg) + 
+  geom_density(aes(x = hwy, fill = drv), colour = NA) + 
+  facet_grid(rows = vars(drv))
+
+p4 <- ggplot(mpg) + 
+  stat_summary(aes(x = drv, y = hwy, fill = drv), geom = "col", fun.data = mean_se) +
+  stat_summary(aes(x = drv, y = hwy), geom = "errorbar", fun.data = mean_se, width = 0.5)
+
+p1 + p2
+```
+
+`+` does not specify any specific layout.
+
+ 3 plots together will create a 1x3 grid while adding 4 plots together will create a 2x2 grid.
+
+```{r, fig.width=7}
+p1 + p2 + p3 + p4
+```
+
+all plotting regions are aligned 
+y-axis titles in the two left-most plots are aligned despite the axis text in the bottom left plot being wider.
+  
+control on the layout
+```{r,, fig.width=7}
+p1 + p2 + p3 + plot_layout(ncol = 2)
+```
+
+
+to force horisontal lay use `|` , for vertical use `/`
+
+```{r,, fig.width=7}
+p1 / p2
+
+p3 | p4
+```
+
+
+```{r, fig.width=7}
+p3 | (p2 / (p1 | p4))
+```
+
+collect guides together
+```{r, fig.width=7}
+p1 + p2 + p3 + guide_area() + plot_layout(ncol = 2, guides = "collect")
+```
+
+it will only remove guides that are exactly alike.
+
+modify subplots
+
+```{r, fig.width=7}
+p12 <- p1 + p2
+p12[[2]] <- p12[[2]] + theme_light()
+p12
+```
+
+```{r, fig.width=7}
+p1 + p4 & theme_minimal()
+```
+
+```{r, fig.width=7}
+p1 + p4 & scale_y_continuous(limits = c(0, 45))
+```
+
+adding annotation
+```{r, fig.width=7}
+p34 <- p3 + p4 + plot_annotation(
+  title = "A closer look at the effect of drive train in cars",
+  caption = "Source: mpg dataset in ggplot2"
+)
+p34
+```
+
+```{r, fig.width=7}
+p34 + plot_annotation(theme = theme_gray(base_family = "mono"))
+```
+
+tag plots
+```{r, fig.width=7}
+p123 <- p1 | (p2 / p3)
+p123 + plot_annotation(tag_levels = "I") # Uppercase roman numerics
+```
+
+## on top of
+
+```{r}
+p1 + inset_element(p2, left = 0.5, bottom = 0.4, right = 0.9, top = 0.95)
+```
+
+
+```{r}
+p12 + plot_annotation(tag_levels = 'A')
+```
+
+## wrapping up
+There other options to arrange plots together: 
+`gridExtra::grid.arrange()` and `cowplot::plot_grid`
+for instance `gridExtra` allow adding non ggplot objects, we can combine it with patchwork syntax
+
+```{r, fig.width=7}
+p1 <- ggplot(mtcars) + 
+  geom_point(aes(mpg, disp)) + 
+  ggtitle('Plot 1')
+
+p1 + gridExtra::tableGrob(mtcars[1:10, c('mpg', 'disp')])
+```
+
