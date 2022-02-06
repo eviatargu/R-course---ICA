@@ -1,0 +1,1265 @@
+---
+title: "Iteration"
+subtitle: "lession 8"
+author: "Eviatar Guttman"
+date: "Last updated: `r format(Sys.time(), '%d-%m-%Y')`"  
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: no
+    smooth_scroll: yes
+    fig_caption: yes
+    highlight: tango
+    theme: flatly
+    css: ../style.css
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+---  
+
+```{r setup, include = F}
+# global chunk options
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = TRUE,
+                      message = TRUE,
+                      error = TRUE,
+                      tidy=TRUE,
+                      fig.align = 'center',
+                      collapse = TRUE,
+                      fig.width = 4,
+                      fig.asp = 5/7)
+
+# don't show NA's in tables
+options(knitr.kable.NA = '')
+```
+
+```{r, message=FALSE}
+library(tidyverse)
+```
+
+
+<div dir="rtl">
+לצמצום כפילות בקוד יש שלוש תועלות עיקריות:   
+1. העין ממוקדת במה ששונה בקוד  
+2. צורך לשנות רק במקום אחד  
+3. פחות באגים  
+</div>
+
+# for loops  
+<div dir="rtl">
+דוגמא ל- `for loop` על __ערכים__ של וקטור באמצעות האינדקס: 
+</div>
+```{r}
+info <- c(name = "eviatar", country = "israel")
+
+for(i in 1:2){
+  print(paste("Element", i, "contains", info[[i]]))
+}
+```
+<div dir="rtl">
+דוגמא ל- `for loop` על __השמות__ של וקטור: 
+</div>
+```{r}
+for (elem in names(info)) {
+    print(paste("Element", elem, "contains", info[elem]))
+}
+```
+<div dir="rtl">
+דוגמא מעשית, `for loop` על האינדקסים של `df`: 
+</div>
+```{r}
+df <- tibble( a = rnorm(10),b = rnorm(10),c = rnorm(10),d = rnorm(10))
+
+# 1. output
+output <- vector("double", ncol(df))  
+
+# 2. sequence - loop over the indices of the df
+for (i in seq_along(df)) {            
+  
+  # 3. body
+  output[[i]] <- median(df[[i]])      
+
+  }
+
+output
+
+```
+<div dir="rtl">
+מעשית, לכל `for loop` יש שלושה רכיבים:     
+1. ה-output:     
+`output <- vector("double", length(x))`  
+  
+אם תגדילו את ה-output בכל איטרציה תוך שימוש ב -`c()`, הלופ יהיה מאד איטי.    
+  
+2. ה- sequence:  
+`i in seq_along(df)`  
+אם יש לכם ווקטור באורך 0 אז `seq_along` עושה את הדבר הנכון: 
+</div>
+```{r}
+y <- vector("double", 0)
+
+seq_along(y)
+
+1:length(y)
+```
+<div dir="rtl">
+3. ה-body:   
+`output[[i]] <- median(df[[i]])`      
+זה הקוד שעושה את העבודה.    
+באיטראציה הראשונה הקוד שירוץ הוא:  
+`run output[[1]] <- median(df[[1]])`.  
+באיטראציה השניה זה:  
+`output[[2]] <- median(df[[2]])`  
+וכך הלאה.   
+  
+תבנית של `for loop`: 
+</div>
+```{r, eval=FALSE}
+output <- vector("double", ncol(df))
+
+for (i in seq_len(length(df))){
+
+    output[[i]] <- fun(df[[i]])
+    
+    }  
+```
+
+## exercises    
+<div dir="rtl">
+1. חשב את הממוצע של כל עמודה ב- `mtcars`.  
+2. ברר מהו סוג העמודה עבור כל עמודה בטבלה `nycflights13::flights`  
+3. חשב את מספר הערכים הייחודיים בכל עמודה בטבלה `iris`.  
+4. זה נפוץ לראות לופ שלא מקצה מקום לתוצאות מלכתחילה, אלא מגדיל את הווקטור בכל איטראציה:   
+</div>
+```{r, eval=FALSE}
+output <- vector("integer", 0)
+for (i in seq_along(x)) {
+  output <- c(output, lengths(x[[i]]))
+}
+output
+```
+<div dir="rtl">
+כיצד זה משפיע על המהירות? תכנן ובצע ניסוי שבודק זאת.
+</div>
+
+# for loop variations  
+
+## Modify existing object    
+<div dir="rtl">
+נחזור לפונקציה `rescale` אשר עבדנו איתה במפגש שעסק בפונקציות: 
+</div>
+```{r}
+df <- tibble(
+  a = rnorm(10, 5),
+  b = rnorm(10, 3),
+  c = rnorm(10, 2),
+  d = rnorm(10, 1))
+
+df
+
+rescale01 <- function(x) {
+  rng <- range(x, na.rm = TRUE)
+  (x - rng[1]) / (rng[2] - rng[1])
+}
+```
+<div dir="rtl">
+נחליף את הווקטורים הקיימים בווקטורים חדשים
+</div>
+```{r}
+for (i in seq_along(df)) {
+  df[[i]] <- rescale01(df[[i]])
+}
+
+df
+```
+<div dir="rtl">
+האופרטור `[[` מבהיר לקורא שאנו רוצים לעבוד עם רכיב יחיד!
+</div>
+
+## Loop over names
+<div dir="rtl">
+כתיבת לופ מהצורה:  
+`(nm in names(xs)`
+נותנת שם שניתן לגשת אליו עם  
+`x[[nm]]`.    
+זה מועיל כאשר רוצים להשתמש בשם כדי לשים אותו בכותרת של גרף או שם של קובץ.  אם אתם יוצרים תוצר עם שמות וודאו שאתם גם נותנים לווקטור התוצרים שמות באופן הבא: 
+</div>
+```{r, eval=FALSE}
+results <- vector("list", length(x))
+names(results) <- names(x)
+```
+<div dir="rtl">
+(ראו את הפתרון לשאלה 2 בתרגיל 1.1, יש שם הקצאת שמות לווקטור התוצרים בלופ.)
+  
+  
+איטראציה על המיקום הנומרי (האינדקס) זו הדרך הכללית ביותר משום שבהינתן מיקום אפשר לחלץ גם את הערך וגם את השם: 
+</div>
+```{r, eval=FALSE}
+for (i in seq_along(x)) {
+  name <- names(x)[[i]]
+  value <- x[[i]]
+}
+```
+
+## Unknown output length  
+<div dir="rtl">
+לעיתים אנו לא יודעים מה אורך התוצר שיהיה.    
+למשל,  נעשה סימולציה של משיכת ערכים מווקטורים עם אורך רנדומאלי:
+</div>
+```{r}
+means <- c(0, 1, 2, 3, 4, 5)
+output <- double()
+for (i in seq_along(means)) {
+  n <- sample(10, 1)
+  output <- c(output, rnorm(n, means[[i]]))
+}
+
+str(output)
+```
+<div dir="rtl">
+פתרון טוב יותר הוא לשמור את התוצרים ב-`list` ולאחר מכן לחבר הכל יחדיו לאחר שהלופ יסתיים. 
+</div>
+```{r}
+out <- vector("list", length(means))
+
+for (i in seq_along(means)) {
+  
+  n <- sample(100, 1)
+  out[[i]] <- rnorm(n, means[[i]])
+}
+
+str(out)
+```
+<div dir="rtl">
+`unlist` משמש לשטח רשימה של וקטורים לווקטור יחיד. פתרון נוסף הוא באמצעות: `purrr::flaten_dpl`
+</div>
+```{r}
+str(unlist(out))
+```
+<div dir="rtl">
+1. אם אתם יוצרים `string` ארוך, אז במקום להשתמש ב-`paste` בכל איטראציה בכדי לחבר את תוצאת הביניים עם מה שנצבר עד כה, שמרו את התוצאות בווקטור אחד. לאחר שהלופ יסתיים השתמשו ב –   
+`paste(output, collapse = "")`.    
+2. אם אתם יוצרים טבלת נתונים `df` גדולה, אז במקום להשתמש ב-`rbind` בכל איטראציה, שמרו את התוצר ב-`list` ולבסוף השתמשו ב- 
+ `dplyr::bind_rows(output)` 
+בכדי לחבר את כל התוצרים יחדיו ל-`df` יחיד. 
+</div>
+
+## Nested for loop        
+example:
+```{r}
+for (i in 1:2) {
+    for (j in 1:3) {
+        print(paste("i =", i, "j =", j))
+    }
+}
+```
+
+Its usefull for matrixes: 
+```{r}
+(x <- matrix(c(9, 0, 3, 17, 5, 2), ncol = 3))
+
+# Loop
+for (i in 1:2) {
+    for (j in 1:3) {
+        print(paste0("Element x[", i, ", ", j, "] is ", x[i, j]))
+    }
+}
+
+```
+
+It is crucial to not mix up the dimensions and/or indices. The following loop …
+```{r, error = T}
+for (i in 1:3) {
+    for (j in 1:2) {
+        print(paste0("Element x[", i, ", ", j, "] is ", x[i, j]))
+    }
+}
+```
+
+by name: 
+```{r}
+# Create demo matrix
+(x <- matrix(c(28, 35, 13, 13, 1.62, 1.53, 1.83, 1.71, 65, 59, 72, 83),
+             nrow = 4, dimnames = list(c("Eviatar", "Anat", "Yasmin", "Fatema"),
+                                       c("Age", "Size", "Weight"))))
+
+for (rname in rownames(x)) {
+    for (cname in colnames(x)) {
+        print(paste("The", cname, "of", rname, "is", x[rname, cname]))
+    }
+}
+```
+
+loop over columns and compute the mean of each column: 
+```{r}
+for (var in colnames(x)) {
+    m <- mean(x[, var])
+    print(paste("Average", var, "is", m))
+}
+```
+
+## Conditional execution  
+<div dir="rtl">
+שילוב של תנאי `if` עם `for loop`: 
+</div>
+```{r}
+n <- 5L
+
+for (i in 1:(n+1) ){
+    if (i <= n) cat(NA, "") else cat("yes!", i ,"is bigger  ")
+}
+```
+<div dir="rtl">
+דוגמא קצת יותר מעשית
+</div>
+```{r}
+first_name <- c("Lea",     "Sabine", "Mario", "Lea", "Peter",   "Max")
+last_name  <- c("Schmidt", "Gross",  "Super", "Kah", "Steiner", "Muster")
+
+for (i in seq_along(first_name)) {
+    # Check if first_name[i] is Lea. If so, print.
+    if (first_name[i] == "Lea") {
+        print(paste("Found:", first_name[i], last_name[i]))
+    }
+}
+```
+
+## interim results      
+<div dir="rtl">
+אפשר להשתמש בתוצאות בייניים בכדי לבצע חישובים רקורסיביים או כדי לקבל מידע על התהליך.   
+דוגמא: 
+</div>
+Initialize $x_1 = 1$    
+  
+Recursively set $x_i = 1.5 x_{i-1},     for$   $i = 2,...N$    
+```{r}
+N <- 7                         # Max. number of iterations
+
+(x <- vector("numeric", 7))    # Empty vector (fixed length)
+
+(x[1] <- 1)    # starting value   
+
+# The loop
+for (i in 2:N) {
+    # Do the calculation. Take 'x' from the previous (i-1)
+    # iteration, multiply, store on x[i] (current iteration).
+    x[i] <- 1.5 * x[i - 1]
+}
+
+print(x)
+```
+<div dir="rtl">
+ה"טריק" פה הוא שהמיקום היחסי משתנה תוך כדי האיטראציות. 
+</div>
+
+## exercises    
+<div dir="rtl">
+1. יש לכם תיקייה מלאה בקבצי CSV שאתם רוצים לעלות ל-R. ה-`path` לכל אחד מהקבצים נמצא בווקטור:   
+</div>
+`dir("8_data", pattern = "\\.csv$", full.names = TRUE)`
+<div dir="rtl">
+כתבו `for loop` שייבא את הקבצים ויהפוך אותם ל-`df` יחיד.
+  
+2. מה קורה אילו השתמשתם ב-
+`for (nm in names(x))` 
+ול-x אין שמות? מה קורה אילו רק לחלק מהרכיבים ב-x יש שמות? מה קורה אילו ישנם שמות שאינם ייחודיים (מצב בו אותו השם חוזר יותר מפעם אחת)? 
+
+3. כתוב פונקציה שמדפיסה את הממוצע של כל עמודה ב-`df` ויחד איתה גם את שם העמודה. למשל,
+`show_mean(iris)` 
+תדפיס:
+ </div>
+
+`show_mean(iris)`   
+  
+`# > Sepal.Length: 5.84`  
+`# > Sepal.Width:  3.06`    
+`# > Petal.Length: 3.76`    
+`# > Petal.Width:  1.20`  
+
+# `while` loop    
+<div dir="rtl">
+לופ `while` טוב לבעיות בהן מספר האיטראציות לא ידוע מראש. זה שימושיים בסימולציות.   
+המבנה הכללי הוא: 
+</div>
+```{r, eval=T}
+while (condition) {
+  # body
+}
+```
+<div dir="rtl">
+היזהרו מלופים אינסופיים. אל תעשו את זה: 
+</div>
+```{r}
+# x <- 1
+# while (x > 0){
+#  x <- x + 1
+  
+# }
+
+```
+<div dir="rtl">
+דוגמא:
+</div>
+```{r}
+# Start with 0
+x <- 0
+
+# Loop until condition is FALSE
+while (x ^ 2 < 20) {
+  
+  print(x)      # Print x
+  
+  x <- x + 1    # Increase x by 1
+  
+}
+
+```
+<div dir="rtl">
+לופ `while` הוא יותר כללי מ-`for loop`. ניתן לכתוב כל `for loop` בצורת `while loop`.
+</div>
+```{r}
+for (i in seq_along(x)) {
+  # body
+}
+
+# Equivalent to
+i <- 1
+while (i <= length(x)) {
+  # body
+  i <- i + 1 
+}
+```
+<div dir="rtl">
+הנה דוגמא לשימוש ב-`while` כדי לגלות כמה פעמים צריך לנסות עד שמקבלים 3 פעמים את אותו צד של מטבע: 
+</div>
+```{r}
+flip <- function() sample(c("T", "H"), 1)
+
+flips <- 0
+nheads <- 0
+
+while (nheads < 3) {
+  if (flip() == "H") {
+    nheads <- nheads + 1
+  } else {
+    nheads <- 0
+  }
+  flips <- flips + 1
+}
+flips
+```
+<div dir="rtl">
+דוגמא אחרונה: ניתן לחזור על הדוגמא הריקורסיבית תוך שימוש ב-`while`.
+</div>
+```{r}
+x <- c(1)        # The initial value
+i <- 1           # Initialize i = 1
+
+# The loop. The while condition is 'x[i] < 10';
+# Stops as soon as this condition is no longer TRUE.
+while(x[i] < 10) {
+    # Calculate new interim result
+    # Combine existing vector y with new result
+    x <- c(x, 1.5 * x[i])
+
+    # Increase iteration counter after calculation.
+    # Could be done before (changes relative index position!).
+    i <- i + 1
+}
+x
+```
+
+# For loop vs functionals
+<div dir="rtl">
+נניח שברצונו לחשב פונקציה על קבוצת עמודות
+</div>
+```{r}
+df <- tibble(
+  a = rnorm(10),
+  b = rnorm(10),
+  c = rnorm(10),
+  d = rnorm(10))
+
+col_mean <- function(df) {
+  
+  output <- vector("double", length(df))
+  
+  for (i in seq_along(df)) {
+    
+    output[i] <- mean(df[[i]])
+  }
+  
+  output
+}
+
+col_mean(df)
+```
+<div dir="rtl">
+כעת אנו רוצים לחשב סטיית תקן עבור כל עמודה. מוטב לעדכן את הפונקציה: 
+</div>
+```{r}
+col_fun <- function(df, fun) {
+  
+  output <- vector("double", length(df))
+  
+  for (i in seq_along(df)) {
+    
+    output[i] <- fun(df[[i]])
+    }
+  
+  output
+}
+
+
+col_fun(df, sd)
+
+col_fun(df, min)
+
+col_fun(df, sum)
+```
+<div dir="rtl">
+דוגמא נוספת: 
+</div>
+```{r}
+f1 <- function(x) abs(x - mean(x)) ^ 1
+f2 <- function(x) abs(x - mean(x)) ^ 2
+f3 <- function(x) abs(x - mean(x)) ^ 3
+
+x <- 1:10
+
+f1(x)
+f2(x)
+```
+<div dir="rtl">
+מוטב לעדכן את הפונקציה
+</div>
+```{r}
+f <- function(x, i) abs(x - mean(x)) ^ i
+
+f(x, 2)
+```
+<div dir="rtl">
+__functional__ זו פונקציה שב-input היא מקבלת כארגומנט פונקציה אחרת ומחזירה ווקטור ב-output. 
+</div>
+:::{.blue-box} 
+"The idea of passing a function to another function is an extremely powerful idea, and it’s one of the behaviors that makes R a functional programming language."
+:::
+```{r}
+triple <- function(x) x * 3
+
+map(1:3, triple)
+```
+
+# purrr    
+<div dir="rtl">
+נשתמש בחבילה `purrr`.     
+האופן שבו `purrr` פועלת זה שהיא פותרת את הבעיה על רכיב יחיד ואז מכלילה את הפתרון לכל רכיב ב-`list`. 
+</div>
+:::{.blue-box} 
+The apply family of functions in base R (`apply()`, `lapply()`, `tapply()`, etc) solve a similar problem, but `purrr` is more consistent and thus is easier to learn.
+:::  
+<div dir="rtl">
+בעוד שב-`dplyr` מבנה הנתונים העיקרי הוא `data frame`, ב-`purrr` עובדים בעיקר עם `list`. 
+</div>  
+## the `map` functions
+```{r echo=FALSE, out.width='50%'}
+knitr::include_graphics('8_images/map.png')
+```
+<div dir="rtl">
+האובייקט שנכנס לכל פונקציית `map` הוא תמיד אחד מ:   
+
+-	ווקטור (מכל סוג). במקרה זה האיטראציה נעשית על כל רכיב בווקטור.   
+-	`list`. במקרה זה האיטראציה מבוצעת על רכיבים ב-`list`.   
+-	`data frame`. במקרה בזה האיטראציה מבוצעת על עמודות בטבלה. (למעשה, df זה מקרה מיוחד של list )  
+מכיוון שהארגומט הראשון הוא תמיד ה –data, פונקציות ה-map עובדות יפה עם ה-
+`pipe %>%`.   
+    
+  
+נגדיר פונקציה  
+</div>
+```{r}
+add10 <- function(.x) {
+  return(.x + 10)
+}
+
+add10(5)
+```
+<div dir="rtl">
+נשתמש בה בתוך `map`: 
+</div>
+```{r}
+map(.x = c(1,3,5), .f = add10)
+```
+<div dir="rtl">
+ובקיצור: 
+</div>
+```{r, eval = F}
+map(c(1,3,5), add10)
+```
+<div dir="rtl">
+`map` תמיד מחזירה `list`. 
+  
+יש פונקציות עם סיומות שונות לכל סוג של output שרוצים: 
+</div>
+`map_lgl()` makes a logical vector.  
+`map_int()` makes an integer vector.  
+`map_dbl()` makes a double vector.  
+`map_chr()` makes a character vector.    
+
+`map_df()` makes a data.frame.
+<div dir="rtl">
+כל פונקציה מקבלת ווקטור כ-input, מפעילה את הפונקציה על כל רכיב ואז מחזירה ווקטור באותו אורך.   
+היתרון המרכזי בשימוש בפונקציות כמו `map` הוא לא המהירות אלא הבהירות. זה הופך את הקוד ליותר קריא.
+</div>
+```{r}
+map(df, mean)
+
+map_dbl(df, mean)
+
+map_chr(mtcars, typeof)
+```
+<div dir="rtl">
+תשומת הלב היא על מה שנעשה.     
+  
+כל פונקציות ה-map מחזירות ווקטור באותו אורך של ה input. משמע, כל קריאה לפונקציה `.f` צריכה להחזיר ערך יחיד. אם לא, יתקבל `error`: 
+</div>
+
+```{r}
+pair <- function(x) c(x, x)
+
+map_dbl(1:2, pair)
+```
+<div dir="rtl">
+זה דומה ל-`error` שיתקבל אם `.f` מחזירה ouput מהסוג הלא נכון: 
+</div>
+```{r}
+map_dbl(1:2, as.character)
+
+map_chr(1:2, as.character)
+```
+<div dir="rtl">
+זה מועיל בד"כ לחזור ל-`map` הבסיסי כי הוא יכול לקבל כל סוג של output
+</div>
+```{r}
+map(1:2, pair)
+```
+<div dir="rtl">
+ההבדלים בין `map` לפונקציה `col_fun` שיצרנו הם:   
+1. כל הפונקציות ב-purrr מיושמות בשפת C. זה הופך אותן מעט יותר מהירות על חשבון readability.   
+2. הארגומנט השני `.f` , הפונקציה שרוצים להפעיל, יכול להיות נוסחה ( ווקטור character )  
+3. `map_*` משתמשת ב- `…` בכדי להעביר ארגומנטים נוספים ל- `.f` בכל פעם שקוראים ל- `.f`.    
+</div>
+```{r}
+map_dbl(df, mean, trim = 0.5)
+```
+<div dir="rtl">
+4. פונקציות ה-map שומרות על שמות: 
+</div>
+```{r}
+z <- list(x = 1:3, y = 4:5)
+
+map_int(z, length)
+
+```
+
+## shortcuts    
+<div dir="rtl">
+כדי לעשות את הקוד יותר קצר, ניתן להשתמש ב `~.`  (טילדה ונקודה) כדי לכתוב בקיצור פונקציה אנונימית (פונקציה ללא שם) בתור הפונקציה שאנו יוצרים כדי להזין כארגומנט.     
+אנו מחליפים הביטוי הבא:   
+</div>
+```{r, eval = F}
+function(x) {
+  x + 10
+}
+
+```
+<div dir="rtl">
+עם הביטוי:
+</div>
+```{r, eval=F}
+~{.x + 10}
+```
+<div dir="rtl">
+הטילדה ~ , מסמלת שמתחילה פונקציה אנונימית.  לארגומנט של הפונקציה האנונימית ניתן לקרוא `.x` או בקיצור `.` (נקודה בלבד).  
+שלא כמו פונקציות רגילות בהן ניתן לבחור את שם הארגומנט כרצוננו, הסימונים האלה קבועים. הארגומנט של פונקציית ה `tilde-dot` הוא תמיד `.x`.   
+כלומר, במקום להגדיר את הפונקציה `add10` בנפרד, אפשר להשתמש בקיצור: 
+</div>
+```{r}
+map_dbl(c(1, 4, 7), ~{.x + 10})
+```
+<div dir="rtl">
+דוגמא נוספת:
+</div>
+```{r}
+map_dbl(mtcars, function(x) length(unique(x)))
+
+# this can be written with: 
+map_dbl(mtcars, ~ length(unique(.x)))
+```
+:::{.blue-box}
+This works because all purrr functions translate formulas, created by ~ (pronounced “twiddle”), into functions. The argument of the function is`.x`.
+:::
+<div dir="rtl">
+דוגמא נוספת, נאמוד מודל רגרסיה ליניארי לתתי קבוצות בטבלת נתונים: 
+</div>
+```{r}
+models <- mtcars %>% 
+  split(.$cyl) %>% 
+  map(function(df) lm(mpg ~ wt, data = df))
+```
+<div dir="rtl">
+גרסה קצרה יותר עם נוסחת ה `tilde-dot`: 
+</div>
+```{r}
+models <- mtcars %>% 
+  split(.$cyl) %>% 
+  map(~lm(mpg ~ wt, data = .))
+```
+<div dir="rtl">
+הנקודה `.` מחליפה את הארגומנט של ה data.   
+האובייקט `models` הוא `list` ובו מספר פלטי רגרסיות.    נחלץ את ה r.squared מכל מודל: 
+</div>
+```{r}
+models %>% 
+  map(summary) %>% 
+  map_dbl(~.$r.squared)
+```
+<div dir="rtl">
+ עוד יותר בקיצור: 
+</div>
+```{r}
+models %>% map(summary) %>% map_dbl("r.squared")
+```
+
+<div dir="rtl">
+אפשר לסנן רכיבים ב-list באמצעות מיקום או שם: 
+</div>
+```{r}
+x <- list(
+  list(-1, x = 1, y = c(2), z = "a"),
+  list(-2, x = 4, y = c(5, 6), z = "b"),
+  list(-3, x = 8, y = c(9, 10, 11))
+)
+
+x
+# Select by name
+map_dbl(x, "x")
+
+
+# Or by position
+map_dbl(x, 1)
+
+
+# Or by both
+map_dbl(x, list("y", 1))
+
+
+# You'll get an error if a component doesn't exist:
+map_chr(x, "z")
+
+# Unless you supply a .default value
+map_chr(x, "z", .default = NA)
+```
+<div dir="rtl">
+אם רוצים להחזיר df, אז אפשר להשתמש ב `map_df`. אבל, צריך לוודא שבכל איטראציה מה שחוזר הוא df עם שמות עמודות עקביים. `map_df` יבצע bind לשורות באופן אוטומטי בכל איטראציה
+</div>
+```{r}
+map_df(c(1, 4, 7), function(.x) {
+  return(data.frame(old_number = .x, 
+                    new_number = add10(.x)))
+})
+```
+<div dir="rtl">
+דוגמא נוספת: 
+</div>
+```{r}
+diamonds %>% map_df(~(data.frame(n_distinct = n_distinct(.x),
+                                  class = class(.x))))
+```
+<div dir="rtl">
+איבדנו את שמות המשתנים (העמודות בטבלה)!     
+שמות המשתנים מתאימים לשמות האובייקטים עליהם ביצענו את האיטראציה.   
+אפשר לומר ל `map_df` לכלול אותם תוך שימוש בארגומנט `.id` הקיים ב- `map_df`. זה יוסיף את השם של הרכיב עליו הופעלה הפונקציה ויכלול אותו בעמודה המתאימה:
+</div>
+```{r}
+diamonds %>% map_df(~(data.frame(n_distinct = n_distinct(.x),
+                                  class = class(.x))),
+                    .id = "var_name")
+
+```
+
+## buliding your function  
+<div dir="rtl">
+אם עולה קושי לחשוב איך לפתור בעיה עם פונקציות ה-map, כדאי להבין תחילה מה הקוד אמור לעשות על רכיב בודד, ולאחר מכן להדביק את זה לתוך `map_df`.    
+נגדיר את המשתנה `.x` ב-environment להיות העמודה הראשונה בטבלת הנתונים: 
+</div>
+```{r}
+.x <- diamonds %>% pluck(1)
+head(.x)
+```
+<div dir="rtl">
+כעת, ניתן להגדיר data frame עבור עמודה זו שתכיל את מספר הערכים הייחודיים ואת ה class של העמודה: 
+</div>
+```{r}
+data.frame(n_distinct = n_distinct(.x),
+           class = class(.x))
+
+```
+<div dir="rtl">
+מכיוון שהתוצאה היא מה שציפינו עבור העמודה הראשונה, ניתן להדביק את הקוד הזה לתוך פונציית ה map תוך שימוש בקיצור ה-tilde-dot: 
+</div>
+```{r}
+diamonds %>% map_df(~(data.frame(n_distinct = n_distinct(.x),
+                                  class = class(.x))),
+                     .id = "variable")
+```
+
+## pass arguments with ...
+
+```{r}
+x <- list(1:5, c(1:10, NA))
+x
+
+map_dbl(x, ~ mean(.x, na.rm = TRUE))
+ 
+# on a shorter form: 
+map_dbl(x, mean, na.rm = TRUE)
+
+
+# if you don't name the argument, it will go the the next argument in the function.
+# second argument in mean() is trim.
+map_dbl(x, mean, 0.2)
+# its better to name the arguments. 
+
+```
+
+## exercises  
+<div dir="rtl">
+1. חשב את הממוצע של כל עמודה ב mtcars.  
+2. קבע מהו סוג כל עמודה ב - `nycflights13::flights`  
+3. חשב כמה ערכים ייחודיים יש לכל עמודה ב-`iris`.  
+4. משוך 10 ערכים רנדומאליים מהתפלגות נורמאלית עם ממוצעים: 10-, 0, 10 ו-100. 
+</div>
+
+# dealing with failure    
+<div dir="rtl">
+תוך כדי השימוש ב-map, הסיכוי שאחד החישובים יכשל גבוה יותר. כישלון אחד יביא ל-error.    
+ `safely` הוא adverb (תואר הפועל) . הוא מקבל ב-input פונקציה ומחזיר שני רכיבים:  
+1. התוצאה  
+2. ה-error.     
+כאשר הפונקציה מצליחה :   
+</div>
+```{r}
+safe_log <- safely(log)
+
+str(safe_log(10))
+```
+<div dir="rtl">
+מה שחוזר כולל את התוצאה, והודעת ה-error היא `NULL`.  
+כאשר הפונקציה נכשלת: 
+</div>
+```{r}
+str(safe_log("a"))
+```
+<div dir="rtl">
+התוצאה היא `NULL` ורכיב ה-`error` כולל את הודעת השגיאה.   
+  
+נשתמש בזה עם map:
+</div>
+
+```{r}
+x <- list(1, 10, "a")
+y <- x %>% map(safely(log))
+
+str(y)
+```
+<div dir="rtl">
+נשתמש ב- `transpose` כדי לקבל שתי `lists`. אחת עם התוצאות ואחרת עם ה-errors: 
+</div>
+```{r}
+y <- y %>% transpose()
+str(y)
+
+is_ok <- y$error %>% map_lgl(is_null)
+is_ok
+
+x[!is_ok]
+
+y$result[is_ok] %>% flatten_dbl()
+
+y$result[is_ok] %>% unlist()
+```
+:::{.blue-box}
+The `flatten_` functions remove a level hierarchy from a list. They are similar to `unlist`, but they only ever remove a single layer of hierarchy and they are type-stable, so you always know what the type of the output is.
+:::
+
+
+<div dir="rtl">
+`possibly` תמיד מצליח. זו גרסה פשוטה יותר מ-`safely`, בגלל שהמשתמש מזין ערך ברירת מחדל שיוחזר: 
+</div>
+```{r}
+x <- list(1, 10, "a")
+x %>% map_dbl(possibly(log, NA_real_))
+```
+<div dir="rtl">
+`quietly` עושה פעולה דומה ל `safely`, אבל במקום לשמור את ה –errors הוא שומר את ההודעות ש-R  מדפיסה.
+</div>
+```{r}
+x <- list(1, -1)
+x %>% map(quietly(log)) %>% str()
+```
+
+
+# map over multiple arguments  
+<div dir="rtl">
+`map2` עושה איטראציה על שני inputs במקביל.   
+שני הארגומנטים הראשונים הם שני האובייקטים לעשות עליהם את האיטראציה. הארגומנט השלישי הוא הפונקציה. 
+</div>
+```{r, eval = F}
+map2(.x = object1, # the first object to iterate over
+     .y = object2, # the second object to iterate over
+     .f = plotFunction(.x, .y))
+```
+
+```{r}
+mu    <-  c(5, 10 , -3)
+sigma <-  c(1, 5  , 10)
+
+map2(mu, sigma, rnorm, n = 5)
+```
+
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics('8_images/map2.png')
+```
+
+<div dir="rtl">
+נשים לב שהארגומנטים שמשתנים בכל קריאה לפונקציה מגיעים לפני הפונקציה להפעלה. ארגומנטים שהם אותו הדבר לכל קריאה של הפונקציה מגיעים אח"כ.    
+`map2` זו פשוט פונקציה שעוטפת `for loop`: 
+</div>
+```{r, eval= FALSE}
+map2 <- function(x, y, f, ...) {
+  
+  out <- vector("list", length(x))
+  
+  for (i in seq_along(x)) {
+    
+    out[[i]] <- f(x[[i]], y[[i]], ...)
+  }
+  
+  out
+}
+```
+<div dir="rtl">
+`pmap` יעשה איטראציה על מספר גדול יותר של ארגומנטים. הוא מקבל רשימה של ארגומנטים: 
+</div>
+```{r}
+args1 <- list(n = c(1, 3, 5), mu,  sigma)
+args1
+pmap(args1, rnorm)
+```
+<div dir="rtl">
+מוטב לתת שמות לארגומנטים שנכנסים לתוך `rnorm`. אחרת, הארגומנטים יותאמו לפי המיקום בו נרשמו. 
+</div>
+```{r}
+args1 <- list(n = c(1, 3, 5), mean = mu,  sd = sigma)
+
+args1
+
+pmap(args1, rnorm)
+```
+
+```{r echo=FALSE, out.width='80%'}
+knitr::include_graphics('8_images/pmap.png')
+```
+<div dir="rtl">
+דוגמא: בטבלת ה- diamonds, ניצור גרפים המציגים את  המחיר כפונקציה של ה-depth של היהלום עבור כל שילוב הקטגוריות של cut ושל color: 
+</div>
+```{r}
+(cut_color <- diamonds %>% distinct(cut, color))
+```
+<div dir="rtl">
+כעת נמשוך עמודות החוצה
+</div>
+```{r}
+cut <- cut_color %>% pull(cut) %>% as.character()
+color <- cut_color %>% pull(color) %>% as.character()
+```
+<div dir="rtl">
+אם רוצים להשתמש בקיצור ה tilde-dot אז הארגומנטים יהיו `.x` לאובייקט הראשון ו- `.y` לאובייקט השני.       
+    
+תחילה, כדאי להבין כיצד הקוד יפעל באיטראציה הראשונה 
+</div>
+```{r}
+.x <- cut[1]
+.y <- color[1]
+
+# make a scatterplot of price vs depth
+diamonds %>% 
+  filter(cut == .x,
+         color == .y) %>%
+  ggplot() +
+  geom_point(aes(x = depth, y = price)) +
+  labs(title = glue::glue(.x, " ", .y))
+```
+<div dir="rtl">
+נראה שזה עובד. נעתיק את הקוד ונזין אותו לתוך `map2`.
+</div>
+```{r}
+plot_list <- map2(.x = cut, 
+                  .y = color, 
+                  .f = ~{
+                    diamonds %>% 
+                      filter(cut == .x,
+                             color == .y) %>%
+                      ggplot() +
+                      geom_point(aes(x = depth, y = price)) +
+                      labs(title = glue::glue(.x, " ", .y))
+                  })
+```
+
+<div dir="rtl">
+אפשר לבחון חלק מתוצאות הרשימה
+</div>
+```{r}
+plot_list[[3]]
+plot_list[[10]]
+```
+
+# other patterns  
+## walk
+Most functions are called for the value that they return, so it makes sense to capture and store the value with a `map()` function. But some functions are called primarily for their side-effects (e.g. `cat()`, `write.csv()`, or `ggsave()`) and it doesn’t make sense to capture their results.   
+`walk()` Walk is an alternative to map that you use when you want to call a function for its side effects.
+```{r}
+welcome <- function(x) {
+  cat("Welcome ", x, "!\n", sep = "")
+}
+names <- c("Eviatar", "Roman")
+
+welcome(names[1])
+welcome(names[2])
+
+map(names, welcome)
+```
+
+the `walk` ignores the return values of the `.f` and instead return `.x` invisibly.
+```{r}
+walk(names, welcome)
+
+```
+A very common side-effect is saving something to disk, and when saving something to disk you always have a pair of values: the object and the path that you want to save it to.
+
+```{r}
+
+plots <- mtcars %>% 
+  split(.$cyl) %>% 
+  map(~ggplot(., aes(mpg, wt)) + geom_point())
+
+plots[[1]]
+
+paths <- stringr::str_c("8_plots/",names(plots), ".png")
+paths
+
+walk2(paths, plots, ggsave)
+
+# or if you have more than 2 arguments: 
+pwalk(list(paths, plots), ggsave)
+
+
+```
+
+Another example: 
+```{r}
+dir.create("8_test_data") # create a directory
+
+cyls <- split(mtcars, mtcars$cyl) # split the data into list of 3 datasets. 
+
+map(cyls, head, 2)
+
+# create a vector of file names
+(paths <- file.path("8_test_data", paste0("cyl-", names(cyls), ".csv")))
+
+# write it into disk:
+walk2(cyls, paths, write.csv)
+
+
+list.files("8_test_data")
+```
+
+## reduce
+`reduce()` is an operation that combines the elements of a vector into a single value.
+reducing f over 1:3 computes the value $f(f(1, 2), 3)$.
+```{r}
+reduce(c(1, 2, 3), `*`)
+reduce(c(1, 2, 3), paste)
+
+
+(age <-  tibble(name = "John", age = 30))
+
+(sex <-  tibble(name = c("John", "Mary"), sex = c("M", "F")))
+
+(trt <- tibble(name = "Mary", treatment = "A"))
+
+reduce(list(age, sex, trt), full_join)
+
+
+
+
+```
+
+
+```{r}
+vs <- list(
+  c(1, 3, 5, 6, 10),
+  c(1, 2, 3, 7, 8, 10),
+  c(1, 2, 3, 4, 8, 9, 10)
+)
+
+vs %>% reduce(intersect)
+```
+
+`reduce()` takes a “binary” function (i.e. a function with two primary inputs), and applies it repeatedly to a list until there is only a single element left.
+  
+  
+`accumulate()` is similar but it keeps all the interim results. You could use it to implement a cumulative sum:
+
+
+```{r}
+x <- sample(10)
+x
+
+x %>% accumulate(`+`)
+```
+
+## modify
+`modify()`  always returns the same type of output as the input:
+```{r}
+df <- data.frame(
+  x = 1:3,
+  y = 6:4
+)
+
+
+modify(df, ~ .x * 2)
+```
+
+in this spectial case `map_df` and its variants works as-well: 
+`map_dfr()` and `map_dfc()` return a data frame created by row-binding and column-binding respectively. They require dplyr to be installed.
+
+```{r}
+map_dfc(df, ~ .x * 2)
+
+map_dfr(df, ~ .x * 2)
+```
+__notes to explain:__  
+"http://www.rebeccabarter.com/blog/2019-08-19_purrr/"
+```{r}
+map_df(df, ~ .x * 2)
+
+map_df(df, ~ data_frame(x = .x), .id = "dist") 
+
+```
+  
+## modify_if  
+`modify` also has a pretty useful sibling, `modify_if()`, that only applies the function to elements that satisfy a specific criteria (specified by a “predicate function”, the second argument called `.p`). For instance, the following example only modifies the third entry since it is greater than 5.
+```{r}
+modify_if(.x = list(1, 4, 7), 
+          .p = function(x) x > 5,
+          .f = add10)
+
+```
+
+## iterate over values and indices  
+`imap()` allows  you to iterate over the values and the indices of a vector in parallel.
+  
+`imap()` is like `map2()` in the sense that your `.f` gets called with two arguments, but here both are derived from the vector. `imap(x, f)` is equivalent to `map2(x, names(x), f)` if x has names, and `map2(x, seq_along(x), f)` if it does not.
+  
+`imap()` is often useful for constructing labels:
+
+```{r}
+imap_chr(iris, ~ paste0("The first value of ", .y, " is ", .x[[1]]))
+```
+
+If the vector is unnamed, the second argument will be the index:
+
+```{r}
+x <- map(1:6, ~ sample(1000, 5))
+x
+imap_chr(x, ~ paste0("The highest value of ", .y, " is ", max(.x)))
+
+```
+
+## more examples
+`keep()` and `discard()` keep elements of the input where the predicate is `TRUE` or `FALSE` respectively:
+```{r}
+iris %>% keep(is.factor) %>% head()
+
+iris %>% discard(is.factor) %>% head()
+
+```
+
+`some()` and `every()` determine if the predicate is true for any or for all of the elements.
+```{r}
+x <- list(1:5, letters, list(10))
+
+x %>% some(is_character)
+
+x %>% every(is_vector)
+```
+
+
+`detect()` finds the first element where the predicate is true; `detect_index()` returns its position.
+```{r}
+(x <- sample(10))
+ 
+x %>% detect(~ . > 5)
+
+x %>% detect_index(~ . > 5)
+```
+
+`head_while()` and `tail_while()` take elements from the start or end of a vector while a predicate is true:
+```{r}
+x %>% head_while(~ . > 5)
+
+x %>% tail_while(~ . > 5)
+```
+## excercises  
+1. Create an enhanced `col_summary()` that applies a summary function to every numeric column in a data frame.
+  
+2. A possible base R equivalent of `col_summary()` is:
+```{r}
+col_sum3 <- function(df, f) {
+  is_num <- sapply(df, is.numeric)
+  df_num <- df[, is_num]
+
+  sapply(df_num, f)
+}
+
+
+```
+
+But it has a number of bugs as illustrated with the following inputs:
+
+```{r}
+df <- tibble(
+  x = 1:3, 
+  y = 3:1,
+  z = c("a", "b", "c")
+)
+# OK
+col_sum3(df, mean)
+
+# Has problems: don't always return numeric vector
+col_sum3(df[1:2], mean)
+
+col_sum3(df[1], mean)
+
+col_sum3(df[0], mean)
+```
+
+What causes the bugs?
+
+  
+
