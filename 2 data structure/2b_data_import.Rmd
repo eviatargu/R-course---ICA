@@ -1,0 +1,396 @@
+---
+title: "Data Import"
+subtitle: "lession 2b"
+author: "Eviatar Guttman"
+date: "Last updated: `r format(Sys.time(), '%d-%m-%Y')`"  
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: no
+    smooth_scroll: yes
+    fig_caption: yes
+    highlight: tango
+    theme: flatly
+    css: ../style.css
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+---  
+
+```{r setup, include = F}
+# global chunk options
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = T,
+                      message = T,
+                      error = T,
+                      tidy=TRUE,
+                      # fig.path='Figures_RMD/',
+                      fig.align = 'center',
+                      collapse = TRUE)
+
+# don't show NA's in tables
+options(knitr.kable.NA = '')
+
+```
+
+```{r}
+library(tidyverse)
+```
+
+# parsing  vectors
+<div dir="rtl">
+ `parser` זו פונקציה שלוקחת וקטור מסוג `character` ומחזירה פורמט אחר נח לעבודה כמו ווקטור לוגי, integer או Date.   
+טבלאות נתונים רבות נשמרות בצורת טקטס. כאשר מייבאים נתונים יש לבצע תהליך של המרת הטקטס לפורמט עבודה.   
+בחבילה `readr` יש סוגים שונים של `parsers`.    
+
+</div>
+```{r parse_vectors}
+# logical
+str(parse_logical(c("TRUE", "FALSE", "NA")))
+
+# integer
+str(parse_integer(c("1", "2", "3")))
+
+parse_integer(c("1", "231", ".", "456"), na = ".")
+
+```
+
+<div dir="rtl">
+ה- `parser`  מחזיר גם הערות על מה שהוא לא הצליח לעשות  
+</div>
+
+```{r parse_vectors2}
+# note the warning when executing the fucnction
+x <- parse_integer(c("123", "345", "abc", "123.45"))
+
+# when printing
+x
+
+# you can access the attribue problems directly
+problems(x)
+```
+
+__parsers for numerics__
+
+```{r parse_numbers}
+parse_double("1.23")
+
+parse_double("1,23", locale = locale(decimal_mark = ","))
+
+parse_number("$100")
+
+parse_number("100NIS")
+
+parse_number("20%")
+
+parse_number("It cost $123.45")
+
+parse_number("$123,456,789")
+
+parse_number("123.456.789", locale = locale(grouping_mark = "."))
+```
+
+__parse dates__
+  
+Date is the number of days since 1970-01-01.  
+The Universal Coordinated Time (UTC) is usually "Year-month-dateTtime"  
+
+```{r}
+str(parse_date(c("2010-01-01", "1979-10-14")))
+
+parse_datetime("2010-10-01T2020")
+
+parse_datetime("20101010")
+
+parse_date("2010-10-01")
+
+parse_date("01-10-2010", format = "%d-%m-%Y")
+
+parse_date("01/10/2010", format = "%d/%m/%Y")
+
+parse_date("jan 22 1969", format = "%b %d %Y")  # b is for Jan, Feb,...
+
+parse_date("january 22, 1969", format = "%B %d, %Y") # B is for January, February,...
+
+parse_date("january 1969", format = "%B  %Y")
+
+parse_date("january 1969", format = "%B %Y")
+
+parse_date("01-text 10-2010", format = "%d- %* %m-%Y") # %* is to skip any number of letters
+```
+
+# data import
+<div dir="rtl">
+בקריאת קבצי טקטס יש לשים לב שתהליך ה –parsing מתבצע כהלכה.  
+אתגר נוסף יש ביבוא ויצוא נתונים בשפה העברית בשל חוסר אחידות ב- text encoding.   
+
+</div>
+
+
+## csv 
+<div dir="rtl">
+csv זה קיצור של comma separated value. אפשר לראות את מבנה הקובץ אם נפתח אותו באמצעות notepad. 
+</div>
+```{r}
+list.files()
+
+list.files("2_data")
+```
+## text encoding
+<div dir="rtl">
+בקובץ ה-csv יש טקסט בעברית שהופך לג'יבריש לאחר יבוא הנתונים
+</div>
+
+```{r}
+read_csv(file = "2_data/example1.csv")
+```
+<div dir="rtl">
+ננסה פונקציה אחרת
+</div>
+```{r}
+read.csv(file = "2_data/example1.csv")
+
+```
+
+:::{.pink-box}
+__encoding UTF-8__
+
+Each hexadecimal number represents a byte of information: 48 is H, 61 is a,
+and so on.  
+The mapping from hexadecimal number to character is called the encoding,
+and in this case the encoding (american English) is called ASCII  
+  
+UTF-8 can encode just about every character used by humans today.    
+:::
+<br>      
+
+
+<div dir="rtl">
+ברירת המחדל עבור כלל הפונקציות בחבילה `readr`  היא לקרוא ולכתוב טקסט בקידוד UTF-8.  
+  
+קובץ ה- csv  שהוצג נוצר באמצעות תוכנת Excel השומרת את הטקסט בקידוד של מערכת ההפעלה.   (במקרה זה, windows-1255)
+    
+הפונקציה `read.csv` המגיעה כחלק מ- `baseR` מתאימה עצמה לקידוד של מהערכת ההפעלה.  
+</div>
+
+```{r}
+read_csv(file = "2_data/example1.csv", locale = locale(encoding = "windows-1255"))
+
+read.csv(file = "2_data/example1.csv", encoding = 'UTF-8')
+
+(df1 <- read.csv(file = "2_data/example1.csv", encoding = 'windows-1255'))
+
+str(df1)
+
+```
+## parsing while import
+<div dir="rtl">
+ה-`parser` מנחש את סוג העמודה על סמך הערכים הראשונים בווקטור. למשל, `read_csv` קוראת את 1000 הערכים הראשונים בכדי לעשות את הניחוש, ולאחר מכן עושה parse לסוג הווקטור שזוהה.   
+אם לדוגמא, עמודה נומרית תכלול `string` באחד מהתאים אז הפונקציה תמיר את הווקטור ל-`character` בכדי לא לאבד מידע. 
+כאשר מחליפים את סוג העמודה מטקסט לנומרי באופן ידני, יש לשים לב אילו נתונים נמחקו בעת ההחלפה.   
+בדוגמא, שתי העמודות הראשונות עשויות להיות נומריות: 
+</div>
+
+
+```{r}
+(df2 <-read.csv(file = "2_data/example2.csv"))
+
+str(df2)
+```
+<div dir="rtl">
+הפיכת הווקטור לנומרי תוך שימוש ב-
+`readr`
+ידפיס אזהרה ב- `console` ואף ישמור את זה ב-`attributes` של הווקטור החדש. 
+</div>
+
+```{r, warning=TRUE}
+df2$var1 <- parse_number(df2$var1)
+
+df2
+
+str(df2)
+```
+<div dir="rtl">
+שימוש ב-
+`as.numeric`
+נותן אזהרה תמציתית  
+כך או כך, יש לשים לב לאזהרות
+</div>
+```{r, warning=T }
+(df2 <-read.csv(file = "2_data/example2.csv"))
+
+df2$var1 <- as.numeric(df2$var1)
+
+str(df2)
+
+```
+<div dir="rtl">
+## parsing problems
+<div dir="rtl">
+מכיוון שה-`parser` מנחש את סוג הווקטור על סמך הערכים הראשונים, ייתכן מצב בו תהיה טעות משום שהערכים הראשונים בווקטור לא מייצגים את הנתונים.   
+למשל, אם ברירת המחדל היא לקרוא את  1000 הערכים הראשונים, ובמקרה כל הערכים הללו הם NA, הפונקציה תניח שסוג הווקטור הוא לוגי. 
+<br>
+קובץ האקסל הבא הוא חלק מטבלת נתונים שהתקבלה מאחד הבנקים במסגרת מחקר המשכנתאות. עמודות 2 ו-4 ריקות במשך כ- 34 אלף שורות. הפונקציה שקוראת את הנתונים הפכה את העמודות הללו ל- logical. 
+</div>
+
+
+```{r}
+library(readxl)
+
+df3a <- read_xlsx("2_data/loans.xlsx")
+str(df3a)
+
+```
+<div dir="rtl">
+__פתרונות אפשריים: __  
+להגדיר ידנית את סוג העמודות  
+</div>
+
+```{r}
+df3b <- read_excel(
+  "2_data/loans.xlsx",
+  col_types = c("numeric","numeric","text","numeric")
+  )
+
+str(df3b)
+```
+<div dir="rtl">
+להגדיר כמה שורות לקרוא על מנת לבצע את הניחוש של סוג העמודה  
+</div>
+
+```{r}
+df3c <- read_excel(
+  "2_data/loans.xlsx",
+  guess_max = 50000)
+
+str(df3c)
+```
+<div dir="rtl">
+להגדיר שכל העמודות יוגדרו כטקטס ולאחר מכן להתמודד עם הנתונים     
+</div>
+
+```{r}
+df3d <- read_excel(
+  "2_data/loans.xlsx",
+  col_types = "text")
+# note we put one value ("text") in col_types. "text" will be recycled to all clolums. 
+
+str(df3d)
+
+```
+
+
+## unorderd tables
+<div dir="rtl">
+טבלאות רבות נוצרות במטרה להציג נתונים או כך שיהיה קל לערוך את הנתונים ולאו דווקא מתוך מטרה לבצע ניתוח נתונים סדור.   
+
+בדוגמא הבאה, הנתונים מתחילים בשורה השלישית.  
+</div>
+
+
+```{r}
+list.files()
+
+(my_file <- file.path(list.files()[1], "mpg.csv"))
+
+
+read.csv(my_file)   # data begins in the 3rd row
+
+# solution - skip 2 rows
+(x <- read.csv(my_file, skip = 2 ))  
+
+# note what happened to the missing values
+
+```
+<div dir="rtl">
+בעמודה year, הרכיב השלישי ריק, והרכיב הרביעי הוא נקודה. `read.csv` לא מזהה אותם כערכים חסרים. read_csv מזהה רק את הרכיב הריק כ-`NA`. 
+</div>
+```{r}
+sum(is.na(x)) 
+
+sum(is.na(x$year)) # R don't know there are NA's
+
+# try use read_csv instead of read.csv
+(x <- read_csv(my_file, skip = 2)) # read_csv vs read.csv
+
+sum(is.na(x))
+
+# solution: 
+read_csv(my_file,skip = 2, na = c(".", NA) )
+```
+## columns names
+<div dir="rtl">
+אפשר להגדיר או לוותר על שמות עמודות בעת יבוא הנתונים
+</div>
+
+```{r}
+read_csv(my_file, skip=2,  col_names = FALSE )
+
+read_csv(my_file, skip=2, col_names = letters[1:5] )
+```
+
+
+## excel file
+<div dir="rtl">
+בקובץ אקסל עשויים להיות מספר גיליונות. אם הארגומט `sheet` ריק, `read_xlsx` תעלה את הגיליון הראשון. ניתן לבחור את הגיליון באמצעות מספר הגיליון המייצג את מיקומו בקובץ או לקרוא לו בשם.    
+אם בקובץ האקסל יש גיליונות מוסתרים, R תספור גם אותם. לכן, מוטב לקרוא לגיליון בשם כדי להימנע ממצב בו העליתם את הגיליון הלא נכון.   
+</div>
+```{r}
+read_xlsx("2_data/example2.xlsx" , sheet = "גליון ראשון")
+```
+
+
+# data type preservation
+<div dir="rtl">
+שני פורמטים של R לשמירת נתונים:   
+`rds` שומר טבלה בודדת ללא שם  
+`RData` שומר מספר כלשהו של אובייקטים לרבות שמותיהם.   
+</div>
+## .rds
+```{r}
+rm(list = setdiff(ls(), "df1"))
+
+df1
+
+write_rds(df1, path = "2_data/rds_file_test.rds")
+
+read_rds("2_data/rds_file_test.rds")
+
+# you need to assign it to an object: 
+x <- read_rds("2_data/rds_file_test.rds")
+
+str(x)
+
+```
+
+
+## .RData
+
+```{r}
+save(df1, x, file = "2_data/rdata_file_text.RData")
+
+rm(list = ls())
+
+load(file = "2_data/rdata_file_text.RData")
+
+ls()
+
+```
+<div dir="rtl">
+
+ישנם פתרונות לייבוא נתונים מתוכנות נוספות.
+למשל, החבילה haven מייבאת נתונים ממערכות
+Stata, SAS and SPSS.
+
+</div>
+
+# exercise  
+<div dir="rtl">
+בתיקייה `2_data` יש קובץ בשם `dy160430.xlsx` ובו נתוני דו"ח חודשי על הלוואות לדיור שפורסמו ע"י בנק ישראל. יבאו את לוח 01 וסדרו את הנתונים כך שיהיו מוכנים לניתוח נתונים. 
+</div>
+
+
+
